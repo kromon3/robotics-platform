@@ -1,0 +1,4 @@
+@import "tailwindcss";
+
+/* Тёмная тема по классу .dark на <html> (переключается в AppLayout), а не по системной настройке */
+@custom-variant dark (&:where(.dark, .dark *));

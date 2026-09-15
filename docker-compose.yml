@@ -1,0 +1,48 @@
+name: robotics-platform
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-robotics}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-robotics}
+      POSTGRES_DB: ${POSTGRES_DB:-robotics}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-robotics} -d ${POSTGRES_DB:-robotics}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-robotics}:${POSTGRES_PASSWORD:-robotics}@db:5432/${POSTGRES_DB:-robotics}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-.env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      PORT: 3000
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@robotics.local}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin12345}
+      SEED_MOCK_PASSWORD: ${SEED_MOCK_PASSWORD:-password123}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-3000}:3000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./apps/web/vite-project
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

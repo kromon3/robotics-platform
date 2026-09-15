@@ -1,0 +1,60 @@
+# --- Git ---
+.git/
+.gitignore
+
+# --- Ставится / собирается внутри образа ---
+node_modules/
+dist/
+build/
+generated/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# NB: package-lock.json НЕ игнорируем — нужен для `npm ci`.
+# NB: prisma/migrations/ НЕ игнорируем — нужен для `prisma migrate deploy`.
+
+# --- Секреты ---
+.env
+.env.*
+*.pem
+*.p12
+*.key
+*.crt
+
+# --- Docker: в контекст не нужен ---
+Dockerfile*
+.dockerignore
+docker-compose*
+.docker/
+
+# --- Тесты и линтеры ---
+test/
+**/*.spec.ts
+**/*.e2e-spec.ts
+eslint.config.mjs
+.prettierrc
+.editorconfig
+
+# --- Документация ---
+*.md
+docs/
+LICENSE
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+.claude/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Логи и временное ---
+logs/
+*.log
+*.tmp
+*.temp
+.cache/
