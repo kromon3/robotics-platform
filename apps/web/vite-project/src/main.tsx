@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+﻿import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import {BrowserRouter, Route, Routes} from "react-router";
 import './index.css';
@@ -8,6 +8,8 @@ import {Login} from "./pages/login.tsx";
 import {Placeholder} from "./pages/placeholder.tsx";
 import {AppLayout} from "./layouts/AppLayout.tsx";
 import {Toaster} from "sonner";
+import {Robots} from "./pages/robot.tsx";
+import {RobotDetail} from "./pages/robot-detail.tsx";
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -16,7 +18,8 @@ createRoot(document.getElementById('root')!).render(
               <Route element={<AppLayout />}>
                   <Route index element={<App />} />
                   <Route path="/projects" element={<Placeholder title="Проекты" />} />
-                  <Route path="/robots" element={<Placeholder title="Роботы" />} />
+                  <Route path="/robots" element={<Robots />} />
+                  <Route path="/robots/:id" element={<RobotDetail />} />
                   <Route path="/calculations" element={<Placeholder title="Расчёты" />} />
                   <Route path="/settings" element={<Placeholder title="Настройки" />} />
               </Route>
