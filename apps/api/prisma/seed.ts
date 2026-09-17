@@ -2,6 +2,7 @@ import 'dotenv/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../generated/prisma/client';
+import { seedCatalog } from './seed-catalog';
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -72,6 +73,8 @@ async function main() {
   console.log('✅ Seed завершён');
   console.log(`   admin: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
   console.log(`   user:  ${USER_EMAIL} / ${USER_PASSWORD}`);
+
+  await seedCatalog(prisma);
 }
 
 main()

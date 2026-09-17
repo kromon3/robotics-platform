@@ -16,15 +16,13 @@ model User {
 
   UserRole UserRole[]
 
-  createAt DateTime @default(now())
-  updateAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([name])
   @@index([email])
 }
 
-// RBAC через таблицы: роли назначаются пользователю через UserRole.
-// Базовые роли USER и ADMIN создаёт сид.
 model Role {
   id          String     @id @default(uuid(7))
   name        String     @unique
@@ -50,4 +48,118 @@ model UserRole {
   @@unique([userId, roleId])
   @@index([userId])
   @@index([roleId])
+}
+
+model Company {
+  id          String   @id @default(uuid(7)) @map("company_id")
+  name        String   @unique @db.VarChar(150)
+  region      String?  @db.VarChar(100)
+  companyType String?  @map("company_type") @db.VarChar(50)
+  inn         String?  @db.VarChar(12)
+  website     String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  products Product[]
+
+  @@map("company")
+}
+
+model Product {
+  id              String   @id @default(uuid(7)) @map("product_id")
+  name            String   @db.VarChar(200)
+  type            String   @db.VarChar(20)
+  subtype         String?  @db.VarChar(100)
+  category        String?  @db.VarChar(100)
+  description     String?  @db.Text
+  price           Decimal? @db.Decimal(15, 2)
+  ugt             Int?     @db.SmallInt
+  marketPotential Int?     @map("market_potential") @db.SmallInt
+  status          String   @db.VarChar(20)
+  companyId       String   @map("company_id")
+
+  // ТТХ от робототехников (п. 3.3.3) — заполняются позже, структура задаётся JSON-схемой в packages/core
+  specs           Json     @default("{}")
+  // Источник и подтверждённость данных (п. 3.3.4)
+  sourceUrl       String?  @map("source_url")
+  sourceDate      DateTime? @map("source_date") @db.Date
+  verified        Boolean  @default(false)
+  // Версия каталога — фиксируется в проекте для воспроизводимости расчёта (п. 3.1.5)
+  catalogVersion  Int      @default(1) @map("catalog_version")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  company           Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  cases             Case[]
+  productIndustries ProductIndustry[]
+  productScenarios  ProductScenario[]
+
+  @@index([companyId])
+  @@index([type])
+  @@index([status])
+  @@map("product")
+}
+
+model Industry {
+  id        String   @id @default(uuid(7)) @map("industry_id")
+  name      String   @unique @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  productIndustries ProductIndustry[]
+
+  @@map("industry")
+}
+
+model Scenario {
+  id          String   @id @default(uuid(7)) @map("scenario_id")
+  name        String   @unique @db.VarChar(200)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  productScenarios ProductScenario[]
+
+  @@map("scenario")
+}
+
+model Case {
+  id            String   @id @default(uuid(7)) @map("case_id")
+  productId     String   @map("product_id")
+  title         String?  @db.VarChar(300)
+  description   String   @db.Text
+  customer      String?  @db.VarChar(200)
+  region        String?  @db.VarChar(100)
+  resultMetrics String?  @map("result_metrics") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Компания доступна через product.company — прямой связи с Company нет намеренно
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("case")
+}
+
+model ProductIndustry {
+  productId  String @map("product_id")
+  industryId String @map("industry_id")
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  industry Industry @relation(fields: [industryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, industryId])
+  @@map("product_industry")
+}
+
+model ProductScenario {
+  productId  String @map("product_id")
+  scenarioId String @map("scenario_id")
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@id([productId, scenarioId])
+  @@map("product_scenario")
 }
