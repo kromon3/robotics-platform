@@ -8,14 +8,18 @@ const DEFAULT_ROLE_NAME = 'USER';
 
 @Injectable()
 export class UsersService {
-  constructor(
-    private prisma: PrismaService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
   async create(userDto: UserDto) {
     // Явная проверка вместо ловли P2002: даёт 409 с понятным текстом, а не 500 на форме регистрации.
     const [byEmail, byName] = await Promise.all([
-      this.prisma.user.findUnique({ where: { email: userDto.email }, select: { id: true } }),
-      this.prisma.user.findUnique({ where: { name: userDto.name }, select: { id: true } }),
+      this.prisma.user.findUnique({
+        where: { email: userDto.email },
+        select: { id: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { name: userDto.name },
+        select: { id: true },
+      }),
     ]);
     if (byEmail) {
       throw new ConflictException('Пользователь с таким email уже существует');
