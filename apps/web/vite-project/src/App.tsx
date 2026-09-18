@@ -6,7 +6,7 @@ function App() {
 
     useEffect(() => {
         axios
-            .get('http://localhost:3000/catalog/products/total')
+            .get(`${import.meta.env.VITE_API_URL}/catalog/products/total`)
             .then((response) => {
                 setTotal(response.data.total);
             })

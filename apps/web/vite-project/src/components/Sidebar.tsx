@@ -1,6 +1,7 @@
-import { Link, NavLink, useNavigate } from "react-router";
+﻿import { Link, NavLink, useNavigate } from "react-router";
 import { getUserEmail, logout } from "../lib/auth.ts";
 import { navItems } from "../lib/nav.ts";
+import { NAV_ICONS } from "./icons.tsx";
 
 
 type SidebarProps = {
@@ -67,7 +68,10 @@ export function Sidebar({ open, onClose, darkMode, onToggleDark }: SidebarProps)
                             }`
                         }
                     >
-                        <span className="text-lg leading-none">{item.icon}</span>
+                        {(() => {
+                            const Icon = NAV_ICONS[item.icon];
+                            return <Icon className="h-5 w-5 shrink-0" />;
+                        })()}
                         {item.name}
                     </NavLink>
                 ))}
