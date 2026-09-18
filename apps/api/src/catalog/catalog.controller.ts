@@ -6,7 +6,10 @@ import { ProductsQueryDto } from './dto/products-query.dto';
 @Controller('catalog')
 export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
-
+  @Get('products/total')
+  async getProductsTotal() {
+    return await this.catalogService.getTotalItems()
+  }
   @Get('products')
   @ApiOperation({
     summary: 'Список продуктов каталога',
@@ -20,4 +23,5 @@ export class CatalogController {
   async getProductsById(@Param('id') id: string) {
     return await this.catalogService.getProductsById(id)
   }
+
 }

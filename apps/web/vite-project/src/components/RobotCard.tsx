@@ -38,8 +38,6 @@ export function RobotCard({ item }: { item: Product }) {
             to={`/robots/${id}`}
             className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-indigo-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-indigo-700"
         >
-            {/* Header */}
-            {/* Бейдж над названием: длинные названия («…до 1 500 кг») иначе выталкивают его за край */}
             <div className="flex flex-col gap-1.5">
                 <span
                     className={`self-start rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[status]}`}

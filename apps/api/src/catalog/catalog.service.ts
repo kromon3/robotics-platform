@@ -67,4 +67,8 @@ export class CatalogService {
         }
         return robot;
     }
+    async getTotalItems() {
+        const total = await this.prisma.product.count();
+        return { total };
+    }
 }
