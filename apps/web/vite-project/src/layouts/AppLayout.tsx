@@ -3,10 +3,6 @@ import { Outlet, useLocation } from "react-router";
 import { Sidebar } from "../components/Sidebar.tsx";
 import { navItems } from "../lib/nav.ts";
 
-/**
- * Каркас всех страниц с сайдбаром. Страница рендерится через <Outlet />.
- * На lg+ сайдбар статичный, на мобилке — шторка с подложкой.
- */
 export function AppLayout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [darkMode, setDarkMode] = useState(() => localStorage.getItem("theme") === "dark");

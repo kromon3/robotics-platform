@@ -10,6 +10,7 @@ import {AppLayout} from "./layouts/AppLayout.tsx";
 import {Toaster} from "sonner";
 import {Robots} from "./pages/robot.tsx";
 import {RobotDetail} from "./pages/robot-detail.tsx";
+import {Project} from "./pages/project.tsx";
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -17,7 +18,7 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
               <Route element={<AppLayout />}>
                   <Route index element={<App />} />
-                  <Route path="/projects" element={<Placeholder title="Проекты" />} />
+                  <Route path="/projects" element={<Project/>} />
                   <Route path="/robots" element={<Robots />} />
                   <Route path="/robots/:id" element={<RobotDetail />} />
                   <Route path="/calculations" element={<Placeholder title="Расчёты" />} />
