@@ -1,12 +1,17 @@
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { A11y, EffectCreative } from "swiper/modules";
 import type { Swiper as SwiperClass } from "swiper";
 import {
     CARGO_TYPES,
+    FIELD_LIMITS,
     RACK_TYPES,
     getCargoOptions,
     getFieldValue,
+    getInvalidFields,
+    getMissingFields,
     useProjectStore,
     type ProjectFieldName,
 } from "../store/store";
@@ -50,8 +55,8 @@ const STEPS: Step[] = [
         title: "Мощности и вместимость",
         columns: 1,
         fields: [
-            { name: "shelfCapacity", label: "Вместимость полки" },
-            { name: "palletPlaces", label: "Паллетоместа" },
+            { name: "shelfCapacity", label: "Мест на секцию стеллажа", unit: "паллеты 4–6, коробы 10–20" },
+            { name: "palletPlaces", label: "Паллетоместа", unit: "шт" },
             { name: "oversizeShare", label: "Доля негабарита", unit: "%" },
         ],
     },
@@ -64,6 +69,7 @@ const STEPS: Step[] = [
             { name: "pallet.L", label: "Длина (L)", unit: "мм" },
             { name: "pallet.W", label: "Ширина (W)", unit: "мм" },
             { name: "pallet.H", label: "Высота (H)", unit: "мм" },
+            { name: "palletMass", label: "Масса паллеты с грузом", unit: "кг", span: "full" },
         ],
     },
     {
@@ -127,12 +133,19 @@ function Field({ name, label, type = "number", unit, span }: FieldConfig) {
     const value = useProjectStore((state) => getFieldValue(state.formData, name));
     const handleChange = useProjectStore((state) => state.handleChange);
     const options = useSelectOptions(name);
+    const limits = FIELD_LIMITS[name];
+    const outOfRange = limits !== undefined && typeof value === "number" && (value < limits.min || value > limits.max);
 
     return (
         <label className={`block ${span === "full" ? "col-span-full" : ""}`}>
             <span className="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-400">
                 {label}
                 {unit && <span className="ml-1 font-normal text-slate-400 dark:text-slate-500">({unit})</span>}
+                {limits && (
+                    <span className="ml-1 font-normal text-slate-400 dark:text-slate-500">
+                        {limits.min}–{limits.max}
+                    </span>
+                )}
             </span>
             {type === "select" ? (
                 <select className={inputClass} name={name} value={value} onChange={handleChange}>
@@ -145,13 +158,15 @@ function Field({ name, label, type = "number", unit, span }: FieldConfig) {
                 </select>
             ) : (
                 <input
-                    className={inputClass}
+                    className={`${inputClass} ${outOfRange ? "border-red-400 focus:border-red-500 focus:ring-red-100 dark:border-red-700" : ""}`}
                     type={type}
                     name={name}
                     value={value}
                     onChange={handleChange}
-                    min={type === "number" ? 0 : undefined}
+                    min={type === "number" ? (limits?.min ?? 0) : undefined}
+                    max={type === "number" ? limits?.max : undefined}
                     step={type === "number" ? "any" : undefined}
+                    aria-invalid={outOfRange || undefined}
                 />
             )}
         </label>
@@ -161,22 +176,56 @@ function Field({ name, label, type = "number", unit, span }: FieldConfig) {
 export function Project() {
     const swiperRef = useRef<SwiperClass | null>(null);
     const [activeIndex, setActiveIndex] = useState(0);
+    const navigate = useNavigate();
     const reset = useProjectStore((state) => state.reset);
+    const fillExample = useProjectStore((state) => state.fillExample);
 
     const isFirst = activeIndex === 0;
     const isLast = activeIndex === TOTAL_SLIDES - 1;
 
+    // Финальный шаг: проверяем обязательные поля, при пропуске — тост и переход на слайд с первым из них
+    const submit = () => {
+        const data = useProjectStore.getState().formData;
+        const goToField = (name: ProjectFieldName) => {
+            const stepIndex = STEPS.findIndex((s) => s.fields.some((f) => f.name === name));
+            if (stepIndex >= 0) swiperRef.current?.slideTo(stepIndex + 1);
+        };
+
+        const missing = getMissingFields(data);
+        if (missing.length > 0) {
+            toast.error(`Заполните: ${missing.map((m) => m.label).join(", ")}`);
+            goToField(missing[0].name);
+            return;
+        }
+        const invalid = getInvalidFields(data);
+        if (invalid.length > 0) {
+            toast.error(invalid.map((i) => i.message).join("\n"), { duration: 6000 });
+            goToField(invalid[0].name);
+            return;
+        }
+        navigate("/projects/offers");
+    };
+
     return (
         <div className="flex flex-col gap-6">
-            <div className="flex items-baseline justify-between">
-                <h2 className="text-xl font-semibold tracking-tight">Проекты</h2>
-                <button
-                    type="button"
-                    onClick={reset}
-                    className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
-                >
-                    Очистить форму
-                </button>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="text-xl font-semibold tracking-tight">Новый расчёт</h2>
+                <div className="flex gap-4">
+                    <button
+                        type="button"
+                        onClick={fillExample}
+                        className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+                    >
+                        Заполнить примером
+                    </button>
+                    <button
+                        type="button"
+                        onClick={reset}
+                        className="text-sm font-medium text-slate-500 hover:underline dark:text-slate-400"
+                    >
+                        Очистить
+                    </button>
+                </div>
             </div>
 
             <div className="mx-auto w-full max-w-3xl">
@@ -255,14 +304,19 @@ export function Project() {
                         >
                             ← Назад
                         </button>
-                        <button
-                            type="button"
-                            className={btnPrimaryClass}
-                            disabled={isLast}
-                            onClick={() => swiperRef.current?.slideNext()}
-                        >
-                            Далее →
-                        </button>
+                        {isLast ? (
+                            <button type="button" className={btnPrimaryClass} onClick={submit}>
+                                Подобрать роботов →
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                className={btnPrimaryClass}
+                                onClick={() => swiperRef.current?.slideNext()}
+                            >
+                                Далее →
+                            </button>
+                        )}
                     </div>
                 </div>
 

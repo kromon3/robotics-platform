@@ -36,7 +36,9 @@ export function RobotCard({ item }: { item: Product }) {
     return (
         <Link
             to={`/robots/${id}`}
-            className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-indigo-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-indigo-700"
+            // h-full + flex-1: карточка растягивается на высоту ячейки грида / flex-колонки,
+            // фиксированные высоты у заголовка, подзаголовка и описания — чтобы соседние карточки не «прыгали»
+            className="flex h-full flex-1 flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-indigo-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-indigo-700"
         >
             <div className="flex flex-col gap-1.5">
                 <span
@@ -44,22 +46,20 @@ export function RobotCard({ item }: { item: Product }) {
                 >
                     {PRODUCT_STATUS_LABELS[status]}
                 </span>
-                <h3 className="min-w-0 break-words text-base font-semibold leading-snug text-gray-900 dark:text-slate-100">
+                <h3 className="line-clamp-2 min-h-[2.75rem] min-w-0 break-words text-base font-semibold leading-snug text-gray-900 dark:text-slate-100">
                     {name}
                 </h3>
             </div>
 
-            {/* Subtype / Category */}
-            {subtitle && (
-                <p className="text-xs text-gray-500 dark:text-slate-400">{subtitle}</p>
-            )}
+            {/* Subtype / Category — строка есть всегда, чтобы не сдвигать описание */}
+            <p className="min-h-4 truncate text-xs text-gray-500 dark:text-slate-400" title={subtitle}>
+                {subtitle || " "}
+            </p>
 
-            {/* Description */}
-            {description && (
-                <p className="text-sm text-gray-700 line-clamp-4 dark:text-slate-300">
-                    {description}
-                </p>
-            )}
+            {/* Description — ровно 4 строки, даже если текста нет */}
+            <p className="line-clamp-4 min-h-20 text-sm text-gray-700 dark:text-slate-300">
+                {description ?? <span className="text-gray-400 dark:text-slate-500">Описание не указано</span>}
+            </p>
 
             {/* Meta */}
             <div className="flex gap-4 text-xs text-gray-600 dark:text-slate-400">

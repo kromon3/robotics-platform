@@ -11,6 +11,8 @@ import {Toaster} from "sonner";
 import {Robots} from "./pages/robot.tsx";
 import {RobotDetail} from "./pages/robot-detail.tsx";
 import {Project} from "./pages/project.tsx";
+import {ProjectOffers} from "./pages/project-offers.tsx";
+import {ProjectResult} from "./pages/project-result.tsx";
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -19,6 +21,8 @@ createRoot(document.getElementById('root')!).render(
               <Route element={<AppLayout />}>
                   <Route index element={<App />} />
                   <Route path="/projects" element={<Project/>} />
+                  <Route path="/projects/offers" element={<ProjectOffers />} />
+                  <Route path="/projects/result" element={<ProjectResult />} />
                   <Route path="/robots" element={<Robots />} />
                   <Route path="/robots/:id" element={<RobotDetail />} />
                   <Route path="/calculations" element={<Placeholder title="Расчёты" />} />

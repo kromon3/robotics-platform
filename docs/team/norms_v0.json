@@ -1,0 +1,47 @@
+{
+  "_readme": "Коэффициенты экономической модели, версия 0 (допущения разработчика). Экономист №1: проверить каждое значение, поправить value и source. Формулы в formulas — на русском, как будут показаны пользователю по кнопке «показать формулу» (п. 3.5.8 ТЗ). Всё, что останется с source = 'допущение', попадёт в раздел допущений отчёта.",
+  "version": 0,
+  "publishedAt": "2026-09-17",
+  "norms": [
+    { "key": "payroll_tax_multiplier", "value": 1.302, "unit": "коэф.", "description": "Страховые взносы на ФОТ (30%) + травматизм (0,2%)", "source": "документ организатора «дополнения по экономике»" },
+    { "key": "worker_salary_month", "value": 70000, "unit": "₽/мес", "description": "Средняя зарплата складского работника (комплектовщик / водитель погрузчика) до вычета НДФЛ", "source": "допущение — уточнить по региону" },
+    { "key": "shifts_per_day", "value": 2, "unit": "смен", "description": "Число смен в сутки на объекте", "source": "допущение — берётся из параметров объекта, если указано" },
+    { "key": "shift_hours", "value": 11, "unit": "ч", "description": "Продолжительность смены", "source": "допущение" },
+    { "key": "working_days_per_year", "value": 365, "unit": "дн", "description": "Рабочих дней в году для склада с непрерывным циклом", "source": "допущение" },
+    { "key": "k_load", "value": 0.8, "unit": "коэф.", "description": "Коэффициент загрузки робота: паспортная производительность × k_load = реальная", "source": "допущение — диапазон 0,7–0,85 по данным робототехника №2" },
+    { "key": "k_availability", "value": 0.9, "unit": "коэф.", "description": "Техническая готовность (учёт зарядки, обслуживания, простоев)", "source": "допущение" },
+    { "key": "reserve_share", "value": 0.1, "unit": "доля", "description": "Резерв роботов сверх расчётного количества (округление вверх)", "source": "допущение" },
+    { "key": "integration_share", "value": 0.15, "unit": "доля CAPEX", "description": "Внедрение, интеграция с WMS, обучение, пусконаладка — доля от стоимости роботов", "source": "допущение — типично 10–25%" },
+    { "key": "infrastructure_per_robot", "value": 150000, "unit": "₽/робот", "description": "Инфраструктура: зарядные станции, разметка, ограждения, сеть Wi-Fi", "source": "допущение" },
+    { "key": "maintenance_share_year", "value": 0.08, "unit": "доля CAPEX/год", "description": "Сервисное обслуживание и запчасти в год, доля от стоимости роботов", "source": "допущение — типично 5–10%" },
+    { "key": "software_license_per_robot_year", "value": 60000, "unit": "₽/робот/год", "description": "Лицензия ПО флота / подписка", "source": "допущение" },
+    { "key": "energy_kwh_price", "value": 7.0, "unit": "₽/кВт·ч", "description": "Тариф на электроэнергию для юрлиц", "source": "допущение — уточнить по региону" },
+    { "key": "energy_kwh_per_robot_day", "value": 15, "unit": "кВт·ч/робот/сут", "description": "Потребление одного AMR при двухсменной работе", "source": "допущение — уточнить по ТТХ батареи" },
+    { "key": "operator_per_robots", "value": 10, "unit": "роботов на 1 оператора", "description": "Сколько роботов обслуживает один оператор флота (его ФОТ остаётся в OPEX)", "source": "допущение" },
+    { "key": "operator_salary_month", "value": 90000, "unit": "₽/мес", "description": "Зарплата оператора роботизированной системы", "source": "допущение" },
+    { "key": "amortization_years", "value": 5, "unit": "лет", "description": "Срок амортизации, линейный метод", "source": "допущение — решение экономиста №1" },
+    { "key": "horizon_years", "value": 5, "unit": "лет", "description": "Горизонт TCO", "source": "ТЗ п. 3.5.2" },
+    { "key": "discount_rate", "value": 0, "unit": "доля", "description": "Ставка дисконтирования. 0 = без дисконтирования (простой срок окупаемости)", "source": "допущение — экономист решает, нужен ли NPV" },
+    { "key": "raas_monthly_share", "value": 0.03, "unit": "доля цены/мес", "description": "RaaS: ежемесячный платёж как доля от стоимости робота (включает обслуживание и ПО)", "source": "допущение — п. 2.4 «дополнений» организатора, проверить" },
+    { "key": "raas_setup_share", "value": 0.05, "unit": "доля цены", "description": "RaaS: разовый платёж за подключение", "source": "допущение" },
+    { "key": "error_cost_share", "value": 0.0, "unit": "доля", "description": "Экономия от снижения ошибок комплектации (доля от оборота). 0 = не учитываем без данных", "source": "допущение" }
+  ],
+  "formulas": [
+    { "key": "robots_required", "text": "N = округл_вверх( пиковая_потребность_в_час / (паспортная_производительность × k_load × k_availability) ) × (1 + reserve_share)" },
+    { "key": "capex", "text": "CAPEX = N × цена_робота × (1 + integration_share) + N × infrastructure_per_robot" },
+    { "key": "opex_robots_year", "text": "OPEX_роботы = N × цена × maintenance_share_year + N × software_license_per_robot_year + N × energy_kwh_per_robot_day × energy_kwh_price × working_days_per_year + округл_вверх(N / operator_per_robots) × operator_salary_month × 12 × payroll_tax_multiplier" },
+    { "key": "opex_baseline_year", "text": "OPEX_без_роботов = число_замещаемых_работников × worker_salary_month × 12 × payroll_tax_multiplier" },
+    { "key": "annual_effect", "text": "Годовой_эффект = OPEX_без_роботов − OPEX_роботы" },
+    { "key": "payback_years", "text": "Срок_окупаемости = CAPEX / Годовой_эффект" },
+    { "key": "roi", "text": "ROI = (Годовой_эффект × horizon_years − CAPEX) / CAPEX" },
+    { "key": "tco_5y", "text": "TCO_5 = CAPEX + OPEX_роботы × horizon_years" },
+    { "key": "raas_year", "text": "RaaS_год = N × цена × raas_monthly_share × 12; CAPEX_RaaS = N × цена × raas_setup_share" }
+  ],
+  "questions_for_economist": [
+    "Какое число работников замещает один робот — считаем через производительность (человек/час vs робот/час) или задаём коэффициентом?",
+    "Учитываем ли NPV / дисконтирование или достаточно простого срока окупаемости?",
+    "Амортизация: 5 лет линейно — ок? Влияет ли на OPEX или только на отчётность?",
+    "RaaS: структура платежей из «дополнений» п. 2.4 — что там именно?",
+    "Интервалы интерпретации (п. 3.5.7): окупаемость < 2 лет — «высокая привлекательность», 2–4 — «средняя», > 4 — «низкая»? Или другие пороги?"
+  ]
+}

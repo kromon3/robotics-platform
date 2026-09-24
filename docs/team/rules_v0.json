@@ -1,0 +1,82 @@
+{
+  "_readme": "Правила подбора роботов для склада, версия 0 (допущения разработчика). Робототехник №2: проверить пороги, добавить правила, поправить формулировки сообщений — их увидит пользователь как объяснение «почему решение исключено» (п. 3.4.2 ТЗ). Поля объекта — из Датасеты_хакатон.xlsx (лист «Склад»), поля робота — из ttx_warehouse_template.csv.",
+  "version": 0,
+  "objectType": "warehouse",
+  "hardRules": [
+    {
+      "id": "aisle_width",
+      "name": "Ширина прохода",
+      "when": "object.aisle_width_mm < robot.min_aisle_width_mm",
+      "message": "Проход {object.aisle_width_mm} мм уже минимально допустимого для робота ({robot.min_aisle_width_mm} мм)",
+      "ifMissing": "flag",
+      "_comment": "ifMissing: 'flag' = не исключать, пометить «требует проверки» (п. 3.4.3); 'exclude' = исключать"
+    },
+    {
+      "id": "payload",
+      "name": "Грузоподъёмность",
+      "when": "object.pallet_weight_kg > robot.payload_kg",
+      "message": "Масса паллеты {object.pallet_weight_kg} кг превышает грузоподъёмность робота ({robot.payload_kg} кг)",
+      "ifMissing": "flag"
+    },
+    {
+      "id": "floor_quality",
+      "name": "Состояние пола",
+      "when": "object.floor_quality == 'poor' && robot.floor_requirements == 'industrial_flat'",
+      "message": "Робот требует ровного промышленного пола, на объекте пол в плохом состоянии",
+      "ifMissing": "flag"
+    },
+    {
+      "id": "floors",
+      "name": "Этажность",
+      "when": "object.floors > 1 && !object.has_freight_lift && robot.navigation_type != 'none'",
+      "message": "Многоэтажный склад без грузового лифта — мобильный робот не сможет перемещаться между этажами",
+      "ifMissing": "flag"
+    },
+    {
+      "id": "lift_height",
+      "name": "Высота подъёма",
+      "when": "object.rack_height_mm > robot.lift_height_mm && robot.subtype in ['Робот-штабелер','Кран-штабелёр']",
+      "message": "Высота стеллажей {object.rack_height_mm} мм превышает высоту подъёма робота ({robot.lift_height_mm} мм)",
+      "ifMissing": "flag"
+    },
+    {
+      "id": "temperature",
+      "name": "Температурный режим",
+      "when": "object.temperature_c < robot.min_operating_temp_c",
+      "message": "Температура на объекте {object.temperature_c}°C ниже рабочего диапазона робота",
+      "ifMissing": "ignore"
+    }
+  ],
+  "scoring": {
+    "_comment": "Мягкие критерии для ранжирования подходящих решений, 0..100. Веса — на проверку робототехнику.",
+    "weights": {
+      "throughput_fit": 0.35,
+      "price_per_unit_throughput": 0.25,
+      "autonomy": 0.15,
+      "ugt": 0.15,
+      "verified_data": 0.10
+    }
+  },
+  "effectiveThroughput": {
+    "formula": "паспортная_производительность × k_load × k_availability × k_route",
+    "k_load": 0.8,
+    "k_availability": 0.9,
+    "k_route": 1.0,
+    "_comment": "k_route — поправка на длину маршрута относительно паспортных условий; робототехник №2 предлагает, как считать"
+  },
+  "simulationParams": {
+    "_comment": "Параметры для 2D-имитации склада (день 8–9). Нужны от робототехника №2 к дню 6.",
+    "speed_m_s_default": 1.5,
+    "load_time_s": 30,
+    "unload_time_s": 30,
+    "charge_threshold_share": 0.2,
+    "charge_time_min": 60,
+    "zones": ["receiving", "storage", "picking", "packing", "shipping", "charging"]
+  },
+  "questions_for_robotics": [
+    "Какие поля ТТХ обязательны для склада, а какие можно оставить пустыми без вреда для подбора?",
+    "Есть ли правила для аэропорта и медучреждения, которых нет для склада (санобработка, шумность, работа с людьми)?",
+    "Насколько типичны 0,7–0,85 для k_load? От чего зависит?",
+    "Сколько времени робот реально работает от одной зарядки при двухсменном режиме?"
+  ]
+}

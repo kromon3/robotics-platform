@@ -1,0 +1,80 @@
+﻿/* Стили визуализации склада (перенесены из warehouse-viz). Всё под .viz, чтобы не перебивать Tailwind:
+   :root -> .viz, body убран. Классы .card/.kpi/.tab и т.д. живут только внутри .viz (нативная вложенность CSS). */
+.viz {
+  --bg: #eef1f4; --card: #fff; --ink: #14202b; --muted: #5d6b78; --line: #d6dde4; --accent: #4f46e5;
+  --soft: #f1f5f9; --active: var(--active); --track: #e2e8f0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: var(--ink);
+.app { display: grid; grid-template-columns: 340px 1fr; gap: 16px; padding: 16px; min-height: 100vh; }
+@media (max-width: 900px) { .app { grid-template-columns: 1fr; } }
+.side, .main { display: grid; gap: 16px; align-content: start; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+.card h3 { margin: 0 0 12px; font-size: 16px; }
+.field { display: grid; gap: 4px; margin-bottom: 10px; font-size: 13px; color: var(--muted); }
+.field input, .field select { padding: 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; color: var(--ink); }
+button.primary { width: 100%; padding: 10px; border: 0; border-radius: 6px; background: var(--accent); color: #fff; font-size: 15px; cursor: pointer; }
+button.primary:disabled { opacity: .6; cursor: wait; }
+.offer { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 8px; margin-bottom: 8px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--card); cursor: pointer; font: inherit; color: inherit; }
+.offer.active { border-color: var(--accent); background: var(--active); }
+.offer small { color: var(--muted); display: block; }
+.preview { flex: none; width: 56px; height: 56px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.kpi span { display: block; font-size: 12px; color: var(--muted); }
+.kpi b { font-size: 22px; }
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.chart { height: 240px; }
+.warn { background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
+.err { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; padding: 8px 12px; border-radius: 6px; }
+.toolbar { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; margin-bottom: 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); margin-top: 10px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -2px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 16px; font-size: 13px; }
+.stats b { color: var(--ink); }
+.app > div:last-child { min-width: 0; }
+.hint { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+details > summary { cursor: pointer; font-weight: 600; margin: 8px 0; }
+.btn { padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); cursor: pointer; font: inherit; }
+.bar { height: 10px; background: var(--track); border-radius: 5px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); transition: width .2s; }
+.bar.mini { height: 6px; }
+.ok { background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 8px 12px; border-radius: 6px; font-size: 13px; margin-bottom: 10px; }
+.rlist { max-height: 220px; overflow: auto; display: grid; gap: 2px; }
+.rrow { display: grid; grid-template-columns: 1.2fr 1.6fr .6fr 1fr; gap: 8px; align-items: center; padding: 4px 6px; border: 0; background: none; font: inherit; font-size: 12px; text-align: left; cursor: pointer; border-radius: 4px; }
+.rrow.active, .rrow:hover { background: var(--active); }
+.sel { font-size: 13px; margin: 8px 0 0; }
+code { background: var(--soft); padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+.card h4 { margin: 12px 0 6px; font-size: 13px; color: var(--muted); }
+.field em { font-style: normal; font-size: 11px; color: #8896a4; }
+.small { font-size: 13px; margin: 6px 0; }
+.tbl { border-collapse: collapse; width: 100%; font-size: 13px; }
+.tbl td, .tbl th { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; }
+.tbl.cmp th { background: var(--soft); }
+.pos { color: #166534; } .neg { color: #991b1b; }
+.split { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--track); }
+.split.mini { height: 8px; }
+.split i { display: block; height: 100%; }
+.tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.tab { display: grid; text-align: left; padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); cursor: pointer; font: inherit; }
+.tab small { color: var(--muted); font-size: 11px; }
+.tab.active { border-color: var(--accent); background: var(--active); box-shadow: inset 0 -3px 0 var(--accent); }
+.foot { font-size: 12px; color: var(--muted); margin: 0; }
+.btn:disabled { opacity: .5; cursor: default; }
+@media (max-width: 1400px) { .app { grid-template-columns: 300px 1fr; } }
+}
+
+/* Тёмная тема: класс .dark на <html> (см. AppLayout). Переопределяем переменные и цвета статусных блоков. */
+.dark .viz {
+  --bg: #0f172a; --card: #0f172a; --ink: #e2e8f0; --muted: #94a3b8; --line: #1e293b; --accent: #818cf8;
+  --soft: #1e293b; --active: rgba(99, 102, 241, .15); --track: #1e293b; --canvas: #334155;
+  .warn { background: rgba(251, 146, 60, .12); border-color: rgba(251, 146, 60, .4); color: #fdba74; }
+  .err { background: rgba(248, 113, 113, .12); border-color: rgba(248, 113, 113, .4); color: #fca5a5; }
+  .ok { background: rgba(74, 222, 128, .12); border-color: rgba(74, 222, 128, .4); color: #86efac; }
+  .pos { color: #86efac; } .neg { color: #fca5a5; }
+  .tab.active { box-shadow: inset 0 -3px 0 var(--accent); }
+  button.primary { background: #4f46e5; }
+  /* recharts: подписи осей и легенда */
+  .recharts-text, .recharts-legend-item-text { fill: var(--muted); color: var(--muted) !important; }
+  .recharts-cartesian-grid line { stroke: var(--line); }
+  .recharts-default-tooltip { background: var(--card) !important; border-color: var(--line) !important; color: var(--ink); }
+  .recharts-tooltip-item, .recharts-tooltip-label { color: var(--ink) !important; }
+}
