@@ -7,6 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 import { RoleModule } from './role/role.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { CatalogModule } from './catalog/catalog.module';
+import { ProjectsModule } from './projects/projects.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -18,6 +19,7 @@ import { CatalogModule } from './catalog/catalog.module';
     AuthModule,
     RoleModule,
     CatalogModule,
+    ProjectsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

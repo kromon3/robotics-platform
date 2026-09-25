@@ -1,5 +1,5 @@
 ﻿import { Link } from "react-router";
-import { PRODUCT_STATUS_LABELS, type Product, type ProductStatus } from "../api/catalog.ts";
+import { PRODUCT_STATUS_LABELS, productPhotoUrl, type Product, type ProductStatus } from "../api/catalog.ts";
 
 const statusStyles: Record<ProductStatus, string> = {
     operation: "bg-green-100 text-green-700",
@@ -33,6 +33,8 @@ export function RobotCard({ item }: { item: Product }) {
     // subtype бывает null — без фильтра рендерится « · Категория» с висящей точкой
     const subtitle = [subtype, category].filter(Boolean).join(" · ");
 
+    const photo = productPhotoUrl(item.specs);
+
     return (
         <Link
             to={`/robots/${id}`}
@@ -40,6 +42,18 @@ export function RobotCard({ item }: { item: Product }) {
             // фиксированные высоты у заголовка, подзаголовка и описания — чтобы соседние карточки не «прыгали»
             className="flex h-full flex-1 flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-indigo-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-indigo-700"
         >
+            {/* Фото: фиксированная высота, contain — снимки разных пропорций не ломают сетку */}
+            <div className="-mx-5 -mt-5 mb-1 flex h-36 items-center justify-center overflow-hidden rounded-t-2xl bg-slate-50 dark:bg-slate-800/50">
+                {photo ? (
+                    <img src={photo} alt={name} loading="lazy" className="h-full w-full object-contain p-2" />
+                ) : (
+                    <svg viewBox="0 0 24 24" className="h-10 w-10 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="8" width="18" height="12" rx="2" />
+                        <path d="M12 4v4M8 14h.01M16 14h.01M9 18h6" />
+                    </svg>
+                )}
+            </div>
+
             <div className="flex flex-col gap-1.5">
                 <span
                     className={`self-start rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[status]}`}

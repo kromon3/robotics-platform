@@ -94,7 +94,7 @@ export function ProjectOffers() {
 
     const choose = (id: string) => {
         selectProduct(id);
-        navigate("/projects/result");
+        navigate("/projects/economics");
     };
 
     return (

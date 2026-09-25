@@ -1,4 +1,4 @@
-// Типы ответа GET /catalog/products и /catalog/products/:id — по тому, что реально отдаёт бэкенд.
+﻿// Типы ответа GET /catalog/products и /catalog/products/:id — по тому, что реально отдаёт бэкенд.
 
 export type ProductType = "brs" | "bas" | "software";
 export type ProductStatus = "operation" | "piloting" | "rnd";
@@ -58,6 +58,14 @@ export type ProductsQuery = {
     page?: number;
     limit?: number;
 };
+
+/** URL фото робота из каталога ТТХ: specs.photo -> /photos/R-101.webp. null, если фото нет. */
+export function productPhotoUrl(specs: Record<string, unknown> | null | undefined): string | null {
+    const photo = specs?.photo;
+    return typeof photo === "string" && photo
+        ? `${import.meta.env.VITE_API_URL}/photos/${encodeURIComponent(photo)}`
+        : null;
+}
 
 export const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
     brs: "БРС",

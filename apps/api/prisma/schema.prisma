@@ -15,12 +15,54 @@ model User {
   avatar   String?
 
   UserRole UserRole[]
+  projects Project[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([name])
   @@index([email])
+}
+
+// Сохранённый расчёт пользователя: параметры объекта, данные экономики, выбранный робот и результат.
+// Версии каталога и модели фиксируются, чтобы расчёт воспроизводился позже (п. 3.1.5 ТЗ).
+model Project {
+  id     String @id @default(uuid(7))
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name       String  @db.VarChar(200)
+  objectType String  @default("warehouse") @map("object_type") @db.VarChar(30)
+
+  // Фаза 1 визарда: геометрия, стеллажи, груз
+  params Json
+  // Фаза 2: режим работы, операции, персонал, бюджет
+  econ Json?
+  // Нормативы модели на момент расчёта (ставки CAPEX/OPEX, коэффициенты)
+  norms Json?
+
+  // Выбранное решение
+  productId String? @map("product_id")
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  // Итоги — чтобы показывать список без пересчёта
+  robotsCount  Int?     @map("robots_count")
+  capex        Decimal? @db.Decimal(15, 2)
+  opexPerYear  Decimal? @map("opex_per_year") @db.Decimal(15, 2)
+  annualEffect Decimal? @map("annual_effect") @db.Decimal(15, 2)
+  paybackYears Decimal? @map("payback_years") @db.Decimal(6, 2)
+  roiPercent   Int?     @map("roi_percent")
+  tco          Decimal? @db.Decimal(15, 2)
+
+  catalogVersion Int    @default(4) @map("catalog_version")
+  modelVersion   String @default("v2") @map("model_version") @db.VarChar(50)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([productId])
+  @@map("project")
 }
 
 model Role {
@@ -92,6 +134,7 @@ model Product {
 
   company           Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   cases             Case[]
+  projects          Project[]
   productIndustries ProductIndustry[]
   productScenarios  ProductScenario[]
 

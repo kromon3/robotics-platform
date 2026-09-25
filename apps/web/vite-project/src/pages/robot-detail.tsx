@@ -4,9 +4,48 @@ import axios from "axios";
 import {
     PRODUCT_STATUS_LABELS,
     PRODUCT_TYPE_LABELS,
+    productPhotoUrl,
     type ProductDetail,
     type ProductStatus,
 } from "../api/catalog.ts";
+
+// Подписи и единицы полей ТТХ из каталога робототехников (лист «Экспорт»)
+const SPEC_LABELS: Record<string, { label: string; unit?: string }> = {
+    robot_type: { label: "Тип робота" },
+    payload_kg: { label: "Грузоподъёмность", unit: "кг" },
+    payload_note: { label: "Грузоподъёмность, уточнение" },
+    length_mm: { label: "Длина платформы", unit: "мм" },
+    width_mm: { label: "Ширина платформы", unit: "мм" },
+    height_mm: { label: "Высота платформы", unit: "мм" },
+    lift_height_mm: { label: "Высота подъёма", unit: "мм" },
+    lift_residual_payload_kg: { label: "Остаточная г/п на макс. высоте", unit: "кг" },
+    table_lift_height_mm: { label: "Высота подъёма стола", unit: "мм" },
+    slope_pct: { label: "Преодолеваемый уклон", unit: "%" },
+    cargo_long_mm: { label: "Длинномер: макс. длина", unit: "мм" },
+    cargo_pallet_l_mm: { label: "Европоддон: длина", unit: "мм" },
+    cargo_pallet_w_mm: { label: "Европоддон: ширина", unit: "мм" },
+    cargo_box_l_mm: { label: "Короб: длина", unit: "мм" },
+    cargo_box_w_mm: { label: "Короб: ширина", unit: "мм" },
+    positioning_mm: { label: "Точность позиционирования", unit: "± мм" },
+    gripper: { label: "Захватное устройство" },
+    runtime_h: { label: "Работа на одном заряде", unit: "ч" },
+    range_km: { label: "Пробег на одном заряде", unit: "км" },
+    speed_mps: { label: "Максимальная скорость", unit: "м/с" },
+    charge_h: { label: "Время зарядки", unit: "ч" },
+    warehouse_height_m: { label: "Высота склада", unit: "м" },
+    lift_drive: { label: "Привод подъёма" },
+    battery: { label: "Аккумулятор" },
+    mass_kg: { label: "Масса робота", unit: "кг" },
+    navigation: { label: "Навигация" },
+    fork_length_mm: { label: "Длина вил", unit: "мм" },
+    throughput_per_hour: { label: "Производительность", unit: "ед/ч" },
+    manufacturer: { label: "Производитель" },
+    country: { label: "Страна" },
+    availability: { label: "Доступность" },
+    note: { label: "Примечание" },
+};
+// Служебные поля — не показываем
+const SPEC_HIDDEN = new Set(["catalog_id", "photo"]);
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -90,8 +129,17 @@ export function RobotDetail() {
 
     const industries = robot.productIndustries.map((x) => x.industry.name);
     const scenarios = robot.productScenarios.map((x) => x.scenario.name);
-    const specs = Object.entries(robot.specs ?? {});
+    // Порядок как в SPEC_LABELS, неизвестные поля — в конец
+    const specOrder = Object.keys(SPEC_LABELS);
+    const specs = Object.entries(robot.specs ?? {})
+        .filter(([k, v]) => !SPEC_HIDDEN.has(k) && v !== null && v !== "")
+        .sort(([a], [b]) => {
+            const ia = specOrder.indexOf(a);
+            const ib = specOrder.indexOf(b);
+            return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
+        });
     const potential = robot.marketPotential ?? 0;
+    const photo = productPhotoUrl(robot.specs);
 
     return (
         <div className="mx-auto max-w-5xl">
@@ -134,6 +182,12 @@ export function RobotDetail() {
             <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
                 {/* Основная колонка */}
                 <div className="space-y-6">
+                    {photo && (
+                        <div className="flex h-72 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                            <img src={photo} alt={robot.name} className="h-full w-full object-contain" />
+                        </div>
+                    )}
+
                     <section className={sectionClass}>
                         <h2 className={sectionTitleClass}>Описание</h2>
                         <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
@@ -175,12 +229,18 @@ export function RobotDetail() {
                             </p>
                         ) : (
                             <dl className="divide-y divide-slate-100 text-sm dark:divide-slate-800">
-                                {specs.map(([key, value]) => (
-                                    <div key={key} className="flex justify-between gap-4 py-2">
-                                        <dt className="text-slate-500 dark:text-slate-400">{key}</dt>
-                                        <dd className="text-right font-medium">{String(value)}</dd>
-                                    </div>
-                                ))}
+                                {specs.map(([key, value]) => {
+                                    const meta = SPEC_LABELS[key];
+                                    return (
+                                        <div key={key} className="flex justify-between gap-4 py-2">
+                                            <dt className="text-slate-500 dark:text-slate-400">{meta?.label ?? key}</dt>
+                                            <dd className="text-right font-medium">
+                                                {typeof value === "number" ? value.toLocaleString("ru-RU") : String(value)}
+                                                {meta?.unit && <span className="ml-1 font-normal text-slate-400">{meta.unit}</span>}
+                                            </dd>
+                                        </div>
+                                    );
+                                })}
                             </dl>
                         )}
                     </section>
