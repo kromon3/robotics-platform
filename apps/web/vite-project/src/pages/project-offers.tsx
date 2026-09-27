@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
 import axios from "axios";
 import { RobotCard } from "../components/RobotCard.tsx";
@@ -51,6 +51,7 @@ export function ProjectOffers() {
     const [error, setError] = useState<string | null>(null);
     const [showExcluded, setShowExcluded] = useState(false);
     const [compareIds, setCompareIds] = useState<string[]>([]);
+    const compareRef = useRef<HTMLDivElement>(null);
 
     const ready = getMissingFields(formData).length === 0 && getInvalidFields(formData).length === 0;
 
@@ -184,6 +185,7 @@ export function ProjectOffers() {
             )}
 
             {compareItems.length > 1 && (
+                <div ref={compareRef} className="scroll-mt-4">
                 <CompareTable
                     items={compareItems}
                     site={toSiteInput(p)}
@@ -193,6 +195,37 @@ export function ProjectOffers() {
                     onChoose={choose}
                     scores={new Map(ranked.map((r) => [r.item.id, r.score]))}
                 />
+                </div>
+            )}
+
+            {/* Плашка внизу экрана: без неё таблица сравнения отрисовывается выше списка и её не видно */}
+            {compareIds.length > 0 && (
+                <div className="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4 print:hidden">
+                    <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                        <span className="text-sm text-slate-600 dark:text-slate-300">
+                            К сравнению: {compareIds.length} из {COMPARE_LIMIT}
+                        </span>
+                        {compareItems.length > 1 ? (
+                            <button
+                                type="button"
+                                onClick={() => compareRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                                className="rounded-full bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-indigo-500"
+                            >
+                                Показать сравнение
+                            </button>
+                        ) : (
+                            <span className="text-sm text-slate-400 dark:text-slate-500">отметьте ещё одно решение</span>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => setCompareIds([])}
+                            aria-label="Очистить сравнение"
+                            className="text-slate-400 transition hover:text-slate-700 dark:hover:text-slate-200"
+                        >
+                            ×
+                        </button>
+                    </div>
+                </div>
             )}
 
             {items && (
