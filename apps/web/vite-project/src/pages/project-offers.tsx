@@ -9,6 +9,8 @@ import { checkCompat, minAisle } from "../viz/core/rules";
 import { checkLift } from "../viz/liftRules";
 import { m, rackTier } from "../viz/rackSpecs";
 import { CompareTable } from "../components/CompareTable.tsx";
+import { ScoreBadge, ScoreBreakdown } from "../components/ScoreBreakdown.tsx";
+import { rankOffers } from "../viz/ranking";
 import { DEFAULT_NORMS } from "../viz/economics";
 import { toSiteInput } from "../viz/adapter";
 
@@ -96,6 +98,26 @@ export function ProjectOffers() {
         };
     }, [items, p]);
 
+    // Ранжирование подходящих решений с раскладкой по факторам (ТЗ 3.4.5)
+    const ranked = useMemo(() => {
+        const cargoMass = p.cargoType === "pallet" ? p.palletMass : p.cargoType === "long" ? Math.max(p.skuMass, 150) : p.skuMass;
+        return rankOffers(
+            fit.map((o) => ({
+                id: o.product.id,
+                robot: o.robot,
+                minAisle: o.minAisle,
+                status: o.product.status,
+                ugt: o.product.ugt,
+                verified: o.product.verified,
+                offer: o,
+            })),
+            toSiteInput(p),
+            DEFAULT_NORMS,
+            cargoMass,
+            p.aisleWidth,
+        );
+    }, [fit, p]);
+
     if (!ready) return <Navigate to="/projects/warehouse" replace />;
 
     const rackLabel = RACK_TYPES.find((r) => r.value === p.rackType)?.label ?? "";
@@ -142,7 +164,8 @@ export function ProjectOffers() {
                     ))}
                 </div>
                 <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-                    Проверено: совместимость со стеллажом и грузом, грузоподъёмность, ширина прохода, высота подъёма до верхнего яруса и грузоподъёмность на высоте. Выберите робота — построим схему склада, имитацию и три сценария.
+                    Проверено: совместимость со стеллажом и грузом, грузоподъёмность, ширина прохода, высота подъёма до верхнего яруса и грузоподъёмность на высоте.
+                    Подходящие решения отсортированы по оценке из 100 баллов — у каждой карточки видно, из чего она сложилась. Выберите робота — построим схему склада, имитацию и три сценария.
                 </p>
             </div>
 
@@ -168,6 +191,7 @@ export function ProjectOffers() {
                     onRemove={toggleCompare}
                     onClear={() => setCompareIds([])}
                     onChoose={choose}
+                    scores={new Map(ranked.map((r) => [r.item.id, r.score]))}
                 />
             )}
 
@@ -175,7 +199,7 @@ export function ProjectOffers() {
                 <>
                     <section>
                         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Подходят — {fit.length}
+                            Подходят — {fit.length} · по убыванию оценки
                         </h3>
                         {fit.length === 0 ? (
                             <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
@@ -183,12 +207,17 @@ export function ProjectOffers() {
                             </p>
                         ) : (
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                {fit.map(({ product, robot, minAisle: aisle }) => (
+                                {ranked.map(({ item: { offer }, score, parts }, i) => {
+                                    const { product, robot, minAisle: aisle } = offer;
+                                    return (
                                     // h-full: обёртка занимает всю ячейку грида, карточка (flex-1) растягивается,
                                     // блок ТТХ и кнопка встают на одну линию во всём ряду
                                     <div key={product.id} className="flex h-full flex-col gap-2">
                                         <RobotCard item={product} />
                                         <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                                            <div className="mb-2">
+                                                <ScoreBadge score={score} rank={i + 1} />
+                                            </div>
                                             <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                                                 <span>{robot.type}</span>
                                                 <span>{robot.w} × {robot.l} м</span>
@@ -197,6 +226,7 @@ export function ProjectOffers() {
                                                 <span className="col-span-2">{aisle > 0 ? `проход ≥ ${aisle} м` : " "}</span>
                                             </div>
                                             <div className="mt-1 truncate text-[11px] text-slate-400 dark:text-slate-500">{SOURCE_LABEL[robot.specsSource]}</div>
+                                            <ScoreBreakdown parts={parts} />
                                             <label className="mt-2 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
                                                 <input
                                                     type="checkbox"
@@ -216,7 +246,8 @@ export function ProjectOffers() {
                                             </button>
                                         </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </section>

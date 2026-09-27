@@ -16,6 +16,8 @@ type Props = {
     onRemove: (productId: string) => void;
     onClear: () => void;
     onChoose: (productId: string) => void;
+    /** Оценка подбора по product.id — показывается отдельной строкой */
+    scores?: Map<string, number>;
 };
 
 type Row = {
@@ -70,7 +72,7 @@ const ROWS: Row[] = [
 const th = "sticky left-0 z-10 bg-slate-50 px-3 py-2 text-left text-xs font-medium text-slate-500 dark:bg-slate-950 dark:text-slate-400";
 const td = "px-3 py-2 text-sm tabular-nums";
 
-export function CompareTable({ items, site, norms, onRemove, onClear, onChoose }: Props) {
+export function CompareTable({ items, site, norms, onRemove, onClear, onChoose, scores }: Props) {
     // Следствие для объекта: сколько таких роботов закроет пиковую потребность и сколько это стоит
     const need = new Map(
         items.map((i) => {
@@ -80,6 +82,14 @@ export function CompareTable({ items, site, norms, onRemove, onClear, onChoose }
     );
 
     const rows: Row[] = [
+        ...(scores
+            ? [{
+                  label: 'Оценка подбора',
+                  value: (i: CompareItem) => (scores.get(i.product.id) !== undefined ? scores.get(i.product.id) + ' / 100' : null),
+                  num: (i: CompareItem) => scores.get(i.product.id) ?? null,
+                  best: 'max' as const,
+              }]
+            : []),
         ...ROWS,
         { label: "Требуется роботов", value: (i) => `${need.get(i.product.id)!.units} шт`, num: (i) => need.get(i.product.id)!.units, best: "min" },
         { label: "Стоимость парка", value: (i) => `${fmt(need.get(i.product.id)!.fleet)} ₽`, num: (i) => need.get(i.product.id)!.fleet || null, best: "min" },
