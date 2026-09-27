@@ -81,8 +81,8 @@ function download(filename: string, content: string, mime: string) {
 const slug = (s: string) =>
     s.replace(/[^\wа-яё\s-]/gi, "").trim().replace(/\s+/g, "-").slice(0, 60) || "otchet";
 
-/** Полный отчёт в Excel: сводка, сценарии, CAPEX, OPEX, исходные данные, допущения */
-export function exportReportToExcel(site: SiteInput, robot: RobotInput, norms: Norms, meta: ReportMeta) {
+/** Книга отчёта как XML — отдельно от скачивания, чтобы её можно было собрать и вне браузера */
+export function buildReportWorkbook(site: SiteInput, robot: RobotInput, norms: Norms, meta: ReportMeta): string {
     const base = computeScenario("baseline", site, robot, norms);
     const buy = computeScenario("buy", site, robot, norms);
     const raas = computeScenario("raas", site, robot, norms);
@@ -203,7 +203,12 @@ export function exportReportToExcel(site: SiteInput, robot: RobotInput, norms: N
         assumptions,
     ]);
 
-    download(`${slug(meta.projectName)}-otchet.xls`, xml, "application/vnd.ms-excel");
+    return xml;
+}
+
+/** Полный отчёт в Excel: сводка, сценарии, CAPEX, OPEX, исходные данные, допущения */
+export function exportReportToExcel(site: SiteInput, robot: RobotInput, norms: Norms, meta: ReportMeta) {
+    download(`${slug(meta.projectName)}-otchet.xls`, buildReportWorkbook(site, robot, norms, meta), "application/vnd.ms-excel");
 }
 
 /**
