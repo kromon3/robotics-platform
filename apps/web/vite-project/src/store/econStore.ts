@@ -4,6 +4,11 @@ import type { ChangeEvent } from "react";
 
 // Вторая фаза визарда: данные для экономического расчёта (блоки A–L из ТЗ команды).
 // Вводятся после подбора робота — техническая совместимость от них не зависит.
+//
+// Блоки E (хранение и грузы) и F (операции) здесь НЕ дублируются: габариты, массы, паллетоместа,
+// приёмка, отгрузка, отбор и структура SKU введены на первой фазе (/projects, ProjectFormData)
+// и берутся оттуда. Во второй фазе спрашиваем только то, чего в первой нет: календарь, персонал,
+// маршруты, инфраструктуру, бюджет и горизонт.
 
 export type NumField = number | "";
 export type WorkMode = "continuous" | "single_shift" | "seasonal";
@@ -39,25 +44,7 @@ export interface EconFormData {
     shiftHours: NumField;
     shiftsPerDay: NumField;
     peakFactor: NumField;
-    // E. Хранение и грузы
-    palletMass: NumField;
-    skuMass: NumField;
-    skuL: NumField;
-    skuW: NumField;
-    skuH: NumField;
-    palletPlaces: NumField;
-    palletL: NumField;
-    palletW: NumField;
-    palletH: NumField;
-    oversizeShare: NumField;
-    // F. Операции
-    inboundPerDay: NumField;
-    outboundPerDay: NumField;
-    pickLinesPerDay: NumField;
-    pickUnitsPerDay: NumField;
-    piecePickShare: NumField;
-    skuActive: NumField;
-    skuAClassShare: NumField;
+    // E–F. Хранение, грузы и операции — из первой фазы (ProjectFormData), здесь не спрашиваем
     // G. Персонал
     staffTotal: NumField;
     staffPickers: NumField;
@@ -85,8 +72,6 @@ export type EconFieldName = keyof EconFormData;
 const EMPTY: EconFormData = {
     activeAreaM2: "", floors: "", floorFlatness: "",
     workMode: "", workingDaysPerYear: "", shiftHours: "", shiftsPerDay: "", peakFactor: "",
-    palletMass: "", skuMass: "", skuL: "", skuW: "", skuH: "", palletPlaces: "", palletL: "", palletW: "", palletH: "", oversizeShare: "",
-    inboundPerDay: "", outboundPerDay: "", pickLinesPerDay: "", pickUnitsPerDay: "", piecePickShare: "", skuActive: "", skuAClassShare: "",
     staffTotal: "", staffPickers: "", staffForklift: "", staffPackers: "", salaryPicker: "", salaryForklift: "",
     payrollTaxPct: 30.2, pickerLinesPerHour: "", timeLossFactor: "",
     routeLengthPerLine: "", conveyorLength: "",
@@ -96,12 +81,8 @@ const EMPTY: EconFormData = {
 
 /** Демо-склад из датасета «Склад» (§2 документа экономистов) */
 export const ECON_EXAMPLE: EconFormData = {
-    activeAreaM2: 5000, floors: 1, floorFlatness: "din18202",
+    activeAreaM2: 960, floors: 1, floorFlatness: "din18202",
     workMode: "continuous", workingDaysPerYear: 365, shiftHours: 11, shiftsPerDay: 2, peakFactor: 1.5,
-    palletMass: 600, skuMass: 5, skuL: 400, skuW: 300, skuH: 300,
-    palletPlaces: 200, palletL: 1200, palletW: 800, palletH: 1500, oversizeShare: 0,
-    inboundPerDay: 1000, outboundPerDay: 1000, pickLinesPerDay: 4800, pickUnitsPerDay: 7200,
-    piecePickShare: 60, skuActive: 800, skuAClassShare: 20,
     staffTotal: 40, staffPickers: 10, staffForklift: 25, staffPackers: 5,
     salaryPicker: 100_000, salaryForklift: 120_000, payrollTaxPct: 30.2,
     pickerLinesPerHour: 15, timeLossFactor: 0.12,
@@ -117,19 +98,6 @@ export const ECON_LIMITS: Partial<Record<EconFieldName, { min: number; max: numb
     shiftHours: { min: 1, max: 24 },
     shiftsPerDay: { min: 1, max: 4 },
     peakFactor: { min: 1, max: 5 },
-    palletMass: { min: 1, max: 5000 },
-    skuMass: { min: 0.01, max: 500 },
-    skuL: { min: 10, max: 2000 }, skuW: { min: 10, max: 2000 }, skuH: { min: 10, max: 2000 },
-    palletPlaces: { min: 1, max: 200_000 },
-    palletL: { min: 300, max: 3000 }, palletW: { min: 300, max: 3000 }, palletH: { min: 100, max: 3000 },
-    oversizeShare: { min: 0, max: 100 },
-    inboundPerDay: { min: 0, max: 100_000 },
-    outboundPerDay: { min: 0, max: 100_000 },
-    pickLinesPerDay: { min: 0, max: 1_000_000 },
-    pickUnitsPerDay: { min: 0, max: 5_000_000 },
-    piecePickShare: { min: 0, max: 100 },
-    skuActive: { min: 0, max: 1_000_000 },
-    skuAClassShare: { min: 0, max: 100 },
     staffTotal: { min: 0, max: 10_000 },
     staffPickers: { min: 0, max: 10_000 },
     staffForklift: { min: 0, max: 10_000 },
@@ -154,8 +122,6 @@ const REQUIRED: { name: EconFieldName; label: string }[] = [
     { name: "shiftHours", label: "Продолжительность смены" },
     { name: "shiftsPerDay", label: "Смен в сутки" },
     { name: "peakFactor", label: "Пиковый коэффициент" },
-    { name: "inboundPerDay", label: "Объём приёмки" },
-    { name: "outboundPerDay", label: "Объём отгрузки" },
     { name: "staffForklift", label: "Операторы погрузчиков" },
     { name: "salaryForklift", label: "Зарплата оператора погрузчика" },
     { name: "payrollTaxPct", label: "Страховые взносы" },
@@ -176,6 +142,15 @@ export function getEconInvalid(d: EconFormData): { name: EconFieldName; message:
     return out;
 }
 
+/** Оставить только поля текущей формы: в расчётах, сохранённых до v2, лежат поля первой фазы */
+export function sanitizeEcon(saved: Partial<EconFormData> | null | undefined): EconFormData {
+    const out = { ...EMPTY };
+    if (!saved) return out;
+    for (const key of Object.keys(EMPTY) as (keyof EconFormData)[])
+        if (key in saved) (out as Record<string, unknown>)[key] = saved[key];
+    return out;
+}
+
 const num = (v: NumField): number => (v === "" ? 0 : v);
 
 /** Значения для расчёта: пустые поля -> 0 */
@@ -190,7 +165,10 @@ interface EconState {
     econ: EconFormData;
     handleChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
     reset: () => void;
-    fillExample: () => void;
+    /** overrides — значения, выведенные из первой фазы (например, площадь по габаритам объекта) */
+    fillExample: (overrides?: Partial<EconFormData>) => void;
+    /** Подставить значение, если пользователь его не вводил (вызывается из обработчиков, не из эффекта) */
+    setDefaults: (values: Partial<EconFormData>) => void;
 }
 
 export const useEconStore = create<EconState>()(
@@ -213,8 +191,26 @@ export const useEconStore = create<EconState>()(
                 });
             },
             reset: () => set({ econ: EMPTY }),
-            fillExample: () => set({ econ: ECON_EXAMPLE }),
+            fillExample: (overrides) => set({ econ: { ...ECON_EXAMPLE, ...overrides } }),
+            setDefaults: (values) =>
+                set((state) => {
+                    const patch: Partial<EconFormData> = {};
+                    for (const [k, v] of Object.entries(values) as [keyof EconFormData, never][])
+                        if (state.econ[k] === "") patch[k] = v;
+                    return Object.keys(patch).length ? { econ: { ...state.econ, ...patch } } : state;
+                }),
         }),
-        { name: "project-econ" },
+        {
+            name: "project-econ",
+            // v2: из формы убраны поля, дублирующие первую фазу — выкидываем их из сохранённого состояния
+            version: 2,
+            migrate: (persisted) => {
+                const saved = (persisted as { econ?: Record<string, unknown> })?.econ ?? {};
+                const econ = { ...EMPTY };
+                for (const key of Object.keys(EMPTY) as (keyof EconFormData)[])
+                    if (key in saved) (econ as Record<string, unknown>)[key] = saved[key];
+                return { econ };
+            },
+        },
     ),
 );

@@ -69,3 +69,32 @@ export const NAV_ICONS: Record<IconName, (props: SVGProps<SVGSVGElement>) => Rea
     calculator: CalculatorIcon,
     settings: SettingsIcon,
 };
+
+// Типы объектов на экране выбора нового расчёта
+
+export function WarehouseIcon(props: SVGProps<SVGSVGElement>) {
+    return (
+        <svg {...base(props)}>
+            <path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
+            <path d="M7 21v-6h10v6" />
+            <path d="M7 17.5h10" />
+        </svg>
+    );
+}
+
+export function AirportIcon(props: SVGProps<SVGSVGElement>) {
+    return (
+        <svg {...base(props)}>
+            <path d="M10.5 3.5a1.5 1.5 0 0 1 3 0V9l7 4v2l-7-2v4l2.5 2v1.5L12 19.5 8 20.5V19l2.5-2v-4l-7 2v-2l7-4z" />
+        </svg>
+    );
+}
+
+export function MedicalIcon(props: SVGProps<SVGSVGElement>) {
+    return (
+        <svg {...base(props)}>
+            <path d="M4 21V8.5L12 3l8 5.5V21a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" />
+            <path d="M12 9.5v6M9 12.5h6" />
+        </svg>
+    );
+}

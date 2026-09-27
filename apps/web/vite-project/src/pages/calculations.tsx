@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { isAuthenticated, projectsApi, type ProjectSummary } from "../api/projects.ts";
 import { productPhotoUrl } from "../api/catalog.ts";
 import { useProjectStore } from "../store/store";
-import { useEconStore } from "../store/econStore";
+import { sanitizeEcon, useEconStore } from "../store/econStore";
 import { paybackZone, roiZone, type Zone } from "../viz/economics";
 
 const ZONE_STYLE: Record<Zone, string> = {
@@ -53,7 +53,7 @@ export function Calculations() {
         try {
             const p = await projectsApi.get(id);
             setFormData({ formData: p.params, selectedProductId: p.productId });
-            if (p.econ) setEcon({ econ: p.econ });
+            if (p.econ) setEcon({ econ: sanitizeEcon(p.econ) });
             selectProduct(p.productId);
             navigate("/projects/result");
         } catch {

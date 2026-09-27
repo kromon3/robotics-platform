@@ -84,7 +84,7 @@ export function ProjectOffers() {
         };
     }, [items, p]);
 
-    if (!ready) return <Navigate to="/projects" replace />;
+    if (!ready) return <Navigate to="/projects/warehouse" replace />;
 
     const rackLabel = RACK_TYPES.find((r) => r.value === p.rackType)?.label ?? "";
     const cargoLabel = CARGO_TYPES.find((c) => c.value === p.cargoType)?.label ?? "";
@@ -100,7 +100,7 @@ export function ProjectOffers() {
     return (
         <div className="flex flex-col gap-6">
             <div>
-                <Link to="/projects" className="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
+                <Link to="/projects/warehouse" className="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
                     ← Изменить параметры
                 </Link>
                 <h2 className="mt-2 text-xl font-semibold tracking-tight">Подходящие решения</h2>

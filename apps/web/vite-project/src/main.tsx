@@ -11,6 +11,8 @@ import {Toaster} from "sonner";
 import {Robots} from "./pages/robot.tsx";
 import {RobotDetail} from "./pages/robot-detail.tsx";
 import {Project} from "./pages/project.tsx";
+import {ProjectStart} from "./pages/project-start.tsx";
+import {ObjectTypeSoon} from "./pages/object-type-soon.tsx";
 import {ProjectOffers} from "./pages/project-offers.tsx";
 import {Calculations} from "./pages/calculations.tsx";
 import {ProjectEconomics} from "./pages/project-economics.tsx";
@@ -22,7 +24,9 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
               <Route element={<AppLayout />}>
                   <Route index element={<App />} />
-                  <Route path="/projects" element={<Project/>} />
+                  <Route path="/projects" element={<ProjectStart />} />
+                  <Route path="/projects/warehouse" element={<Project />} />
+                  <Route path="/projects/soon/:type" element={<ObjectTypeSoon />} />
                   <Route path="/projects/offers" element={<ProjectOffers />} />
                   <Route path="/projects/economics" element={<ProjectEconomics />} />
                   <Route path="/projects/result" element={<ProjectResult />} />

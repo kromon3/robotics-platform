@@ -23,6 +23,8 @@ export type WizardStep<TName extends string = string> = {
     description?: string;
     columns: 1 | 2 | 3;
     fields: WizardField<TName>[];
+    /** Произвольный блок под полями шага: сводка, пояснение, ссылка на другой экран */
+    content?: ReactNode;
 };
 
 export type FieldLimit = { min: number; max: number };
@@ -201,9 +203,12 @@ export function Wizard<TName extends string>({
                                 {step.description && (
                                     <p className="mb-5 text-sm text-slate-500 dark:text-slate-400">{step.description}</p>
                                 )}
-                                <div className={`mt-4 grid gap-4 ${GRID_COLUMNS[step.columns]}`}>
-                                    {step.fields.map(renderField)}
-                                </div>
+                                {step.fields.length > 0 && (
+                                    <div className={`mt-4 grid gap-4 ${GRID_COLUMNS[step.columns]}`}>
+                                        {step.fields.map(renderField)}
+                                    </div>
+                                )}
+                                {step.content}
                             </fieldset>
                         </SwiperSlide>
                     ))}

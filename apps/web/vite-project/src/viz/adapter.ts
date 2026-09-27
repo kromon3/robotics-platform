@@ -44,22 +44,25 @@ function buildCargo(p: NumericFormData) {
 
 /**
  * Данные двух фаз визарда -> входные данные экономической модели.
- * Фаза 1 (/projects) — геометрия и груз, фаза 2 (/projects/economics) — режим, операции, персонал, бюджет.
- * Если вторая фаза не заполнена, берутся значения фазы 1 и дефолты датасета «Склад» (§2 документа).
+ * Фаза 1 (/projects) — геометрия, груз и грузопоток, фаза 2 (/projects/economics) — календарь,
+ * персонал, инфраструктура и бюджет. Грузопоток спрашивается один раз, в первой фазе:
+ * вторая его не переопределяет, иначе два экрана молча спорили бы за один и тот же показатель.
+ * Если вторая фаза не заполнена, берутся дефолты датасета «Склад» (§2 документа экономистов).
  */
 export function toSiteInput(p: NumericFormData, e?: EconNumeric): SiteInput {
     const isPallet = p.cargoType === "pallet";
 
+    // Паллетный склад считаем по приёмке/отгрузке, коробочный — по строкам отбора (строка = операция)
+    const inboundPerDay = isPallet ? p.receivePalletsDay : p.pickLinesDay / 2;
+    const outboundPerDay = isPallet ? p.shipPalletsDay : p.pickLinesDay / 2;
+
     if (e && e.workMode) {
-        // Паллетный склад считаем по приёмке/отгрузке, коробочный — по строкам отбора (одна строка = одна операция)
-        const inbound = isPallet ? e.inboundPerDay : e.pickLinesPerDay / 2;
-        const outbound = isPallet ? e.outboundPerDay : e.pickLinesPerDay / 2;
         // Замещаемая группа: операторы погрузчиков для паллет, отборщики для штучного отбора
         const staffCount = isPallet ? e.staffForklift : e.staffPickers || e.staffForklift;
         const salary = isPallet ? e.salaryForklift : e.salaryPicker || e.salaryForklift;
         return {
-            inboundPerDay: inbound,
-            outboundPerDay: outbound,
+            inboundPerDay,
+            outboundPerDay,
             shiftsPerDay: e.shiftsPerDay || 1,
             shiftHours: e.shiftHours || 8,
             workingDaysPerYear: e.workingDaysPerYear || 365,
@@ -72,8 +75,8 @@ export function toSiteInput(p: NumericFormData, e?: EconNumeric): SiteInput {
 
     const shifts = p.workHours > 12 ? 2 : 1;
     return {
-        inboundPerDay: isPallet ? p.receivePalletsDay : p.pickLinesDay / 2,
-        outboundPerDay: isPallet ? p.shipPalletsDay : p.pickLinesDay / 2,
+        inboundPerDay,
+        outboundPerDay,
         shiftsPerDay: shifts,
         shiftHours: shifts > 0 ? p.workHours / shifts : p.workHours,
         workingDaysPerYear: 365,
@@ -107,11 +110,14 @@ const fmt = (n: number) => Math.round(n).toLocaleString("ru-RU");
 
 // ── result для визуализации ─────────────────────────────────────────────
 
+export const MODEL_VERSION = "Экономическая модель v2 (экономисты), CAPEX §16.3";
+export const DATA_VERSION = "каталог организатора v4 + ТТХ робототехников";
+
 const meta = (name: string, kind: ScenarioKind) => ({
     scenarioName: name,
     kind,
-    modelVersion: "Экономическая модель v2 (экономисты), CAPEX §16.3",
-    dataVersion: "каталог организатора v4 + ТТХ робототехников",
+    modelVersion: MODEL_VERSION,
+    dataVersion: DATA_VERSION,
     calculatedAt: new Date().toISOString(),
 });
 

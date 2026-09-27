@@ -19,7 +19,8 @@ export function AppLayout() {
             ?.name ?? "";
 
     return (
-        <div className="flex h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+        // print:* — раскладка для печати отчёта: колонка с прокруткой разворачивается в поток страницы
+        <div className="flex h-screen bg-slate-100 text-slate-900 print:block print:h-auto print:bg-white dark:bg-slate-950 dark:text-slate-100">
             {/* Подложка для мобильной шторки */}
             {sidebarOpen && (
                 <div
@@ -36,7 +37,7 @@ export function AppLayout() {
             />
 
             <div className="flex min-w-0 flex-1 flex-col">
-                <header className="flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900">
+                <header className="flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 print:hidden dark:border-slate-800 dark:bg-slate-900">
                     <button
                         type="button"
                         aria-label="Открыть меню"
@@ -50,7 +51,7 @@ export function AppLayout() {
                     <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
                 </header>
 
-                <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+                <main className="flex-1 overflow-y-auto p-4 lg:p-6 print:overflow-visible print:p-0">
                     <Outlet />
                 </main>
             </div>

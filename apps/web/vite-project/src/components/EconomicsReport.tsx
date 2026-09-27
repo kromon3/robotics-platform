@@ -20,6 +20,7 @@ import {
     type SiteInput,
     type Zone,
 } from "../viz/economics";
+import type { ReportMeta } from "../lib/report-export";
 
 const ZONE_STYLE: Record<Zone, string> = {
     green: "border-green-300 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300",
@@ -41,13 +42,15 @@ const short = (n: number) =>
 const card = "rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900";
 const title = "mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400";
 
-type Props = { site: SiteInput; robot: RobotInput; norms: Norms };
+type Props = { site: SiteInput; robot: RobotInput; norms: Norms; meta?: ReportMeta };
 
 /**
  * Экономический отчёт: показатели с зонами интерпретации (§11 модели), структура CAPEX,
  * окупаемость по годам, сравнение сценариев и анализ чувствительности (§12).
+ * Блоки `hidden print:block` попадают только в PDF (ТЗ 3.7.3): титул, исходные данные,
+ * нормативы, источники и ограничения — чтобы выгруженный отчёт читался без приложения.
  */
-export function EconomicsReport({ site, robot, norms }: Props) {
+export function EconomicsReport({ site, robot, norms, meta }: Props) {
     const buy = useMemo(() => computeScenario("buy", site, robot, norms), [site, robot, norms]);
     const raas = useMemo(() => computeScenario("raas", site, robot, norms), [site, robot, norms]);
     const base = useMemo(() => computeScenario("baseline", site, robot, norms), [site, robot, norms]);
@@ -107,7 +110,24 @@ export function EconomicsReport({ site, robot, norms }: Props) {
     const opexData = buy.opexItems.filter((i) => i.value > 0).map((i) => ({ name: i.label, value: Math.round(i.value), method: i.method, source: i.source }));
 
     return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 print:gap-4 print:text-slate-900">
+            {/* Титул — только в печатной версии */}
+            {meta && (
+                <header className="hidden border-b border-slate-300 pb-3 print:block">
+                    <div className="text-xs uppercase tracking-wide text-slate-500">
+                        Платформа подбора роботизированных решений · экспресс-оценка
+                    </div>
+                    <h1 className="mt-1 text-xl font-semibold">{meta.projectName}</h1>
+                    <div className="mt-1 text-xs text-slate-600">
+                        Объект: {meta.objectType} · Решение: {meta.robotName} · Отчёт от{" "}
+                        {new Date().toLocaleString("ru-RU")}
+                    </div>
+                    <div className="text-xs text-slate-600">
+                        Каталог v{meta.catalogVersion} · {meta.modelVersion} · ТТХ: {meta.specsSource}
+                    </div>
+                </header>
+            )}
+
             {/* Ключевые показатели с зонами */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Metric label="Срок окупаемости" value={buy.paybackYears !== null ? `${buy.paybackYears} лет` : "—"} zone={pZone} hint="зелёная ≤ 2,5 · жёлтая 2,5–4 · красная > 4" />
@@ -249,7 +269,74 @@ export function EconomicsReport({ site, robot, norms }: Props) {
                     Вертикальная линия — базовый срок {buy.paybackYears ?? "—"} лет. Параметры отсортированы по влиянию: сверху то, что двигает результат сильнее.
                 </p>
             </section>
+
+            {/* Приложение к PDF: исходные данные, нормативы, источники, ограничения */}
+            <section className="hidden print:block">
+                <h3 className={title}>Исходные данные</h3>
+                <SpecTable
+                    rows={[
+                        ["Приёмка", `${Math.round(site.inboundPerDay)} ед/сут`],
+                        ["Отгрузка", `${Math.round(site.outboundPerDay)} ед/сут`],
+                        ["Режим работы", `${site.shiftsPerDay} смен × ${site.shiftHours} ч, ${site.workingDaysPerYear} дн/год`],
+                        ["Пиковый коэффициент", String(site.peakFactor)],
+                        ["Замещаемый персонал", `${site.staffCount} чел. × ${money(site.staffSalaryMonth)}/мес`],
+                        ["Бюджет роботизации", money(site.budget)],
+                        ["Решение", `${robot.name}, ${money(robot.price)} за единицу`],
+                        ["Паспортная производительность", `${robot.throughputPerHour} ед/ч`],
+                        ["Расчётная потребность", `${Math.round(buy.peakDemand)} ед/ч в пик → ${buy.units} роботов`],
+                    ]}
+                />
+            </section>
+
+            <section className="hidden print:block">
+                <h3 className={title}>Нормативы и допущения</h3>
+                <SpecTable
+                    rows={[
+                        ["Коэффициент использования робота", String(norms.utilization)],
+                        ["Резерв мощности", `${Math.round(norms.capacityReserve * 100)}%`],
+                        ["Выработка оператора", `${norms.workerOutputPerHour} ед/ч`],
+                        ["Начисления на ФОТ", String(norms.payrollTax)],
+                        ["ПО / интеграция / ПНР / ЗИП", `${Math.round(norms.softwareShare * 100)}% / ${Math.round(norms.integrationShare * 100)}% / ${Math.round(norms.commissioningShare * 1000) / 10}% / ${Math.round(norms.sparePartsShare * 100)}% от стоимости оборудования`],
+                        ["Резерв проекта", `${Math.round(norms.capexReserve * 100)}%`],
+                        ["Сервис / ремонт в год", `${Math.round(norms.serviceShare * 1000) / 10}% / ${Math.round(norms.repairShare * 100)}% от стоимости оборудования`],
+                        ["Электроэнергия", `${norms.robotPowerKw} кВт на робота, ${norms.energyPrice} ₽/кВт·ч`],
+                        ["RaaS", `${money(norms.raasMonthlyPerRobot)} за робота в месяц`],
+                        ["Горизонт расчёта", `${norms.horizonYears} лет`],
+                    ]}
+                />
+                <p className="mt-2 text-xs text-slate-600">
+                    Источник каждой статьи затрат указан в разделах «Структура CAPEX» и «Структура OPEX»: КП поставщика,
+                    датасет или модельное допущение. Модельные допущения заменяются данными коммерческого предложения.
+                </p>
+            </section>
+
+            <section className="hidden print:block">
+                <h3 className={title}>Ограничения</h3>
+                <p className="text-xs leading-relaxed text-slate-700">
+                    Результат — <strong>предварительная оценка, требующая верификации при обследовании объекта</strong>.
+                    Модель не учитывает налоговые эффекты, дисконтирование, инфляцию, остаточную стоимость оборудования и
+                    лизинг. Косвенные эффекты (рост пропускной способности, снижение ошибок, высвобождение площадей) не
+                    оцениваются. Схема размещения — типовая ячейка, тиражируемая по площади, а не проект планировки.
+                    {meta && ` Источники данных: каталог организатора v${meta.catalogVersion}, ТТХ — ${meta.specsSource}, ${meta.modelVersion}.`}
+                </p>
+            </section>
         </div>
+    );
+}
+
+/** Двухколоночная таблица «параметр — значение» для печатных разделов */
+function SpecTable({ rows }: { rows: [string, string][] }) {
+    return (
+        <table className="w-full text-xs">
+            <tbody className="divide-y divide-slate-200">
+                {rows.map(([k, v]) => (
+                    <tr key={k}>
+                        <td className="w-1/2 py-1 pr-4 text-slate-500">{k}</td>
+                        <td className="py-1 tabular-nums text-slate-800">{v}</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
     );
 }
 

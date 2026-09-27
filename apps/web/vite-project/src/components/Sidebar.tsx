@@ -25,6 +25,7 @@ export function Sidebar({ open, onClose, darkMode, onToggleDark }: SidebarProps)
         <aside
             className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white
                         transition-transform duration-200 ease-out
+                        print:hidden
                         dark:border-slate-800 dark:bg-slate-900
                         lg:static lg:translate-x-0
                         ${open ? "translate-x-0" : "-translate-x-full"}`}

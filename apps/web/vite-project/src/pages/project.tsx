@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { A11y, EffectCreative } from "swiper/modules";
@@ -209,7 +209,12 @@ export function Project() {
     return (
         <div className="flex flex-col gap-6">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="text-xl font-semibold tracking-tight">Новый расчёт</h2>
+                <div>
+                    <Link to="/projects" className="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
+                        ← Другой тип объекта
+                    </Link>
+                    <h2 className="mt-1 text-xl font-semibold tracking-tight">Склад — параметры объекта</h2>
+                </div>
                 <div className="flex gap-4">
                     <button
                         type="button"

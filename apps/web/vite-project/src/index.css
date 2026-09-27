@@ -2,3 +2,35 @@
 
 /* Тёмная тема по классу .dark на <html> (переключается в AppLayout), а не по системной настройке */
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* Печать отчёта (ТЗ 3.7.3): PDF получается через «Сохранить как PDF» в диалоге печати.
+   Приложение — колонка фиксированной высоты с прокруткой внутри <main>, поэтому на печати
+   снимаем height/overflow, иначе браузер выведет только первый экран. */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 14mm;
+    }
+
+    html,
+    body,
+    #root {
+        height: auto !important;
+        overflow: visible !important;
+        background: #fff !important;
+    }
+
+    /* Секции, таблицы и графики не рвём между страницами */
+    section,
+    table,
+    .avoid-break {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    /* Тени и рамки на бумаге только мешают */
+    .shadow-sm,
+    .shadow {
+        box-shadow: none !important;
+    }
+}
