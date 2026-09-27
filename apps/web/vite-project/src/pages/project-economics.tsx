@@ -13,6 +13,7 @@ import {
     type EconFieldName,
 } from "../store/econStore";
 import { CARGO_TYPES, getInvalidFields, getMissingFields, useProjectStore } from "../store/store";
+import { pricedRacksFor, rackLabel } from "../viz/rackCatalog";
 
 const n = (v: number | "") => (v === "" ? 0 : v);
 
@@ -74,6 +75,16 @@ const buildSteps = (p: ProjectFormData, areaByDimensions: number): WizardStep<Ec
             },
             { name: "floors", label: "Этажей", unit: "шт" },
             { name: "floorFlatness", label: "Отклонение пола", type: "select", span: "full" },
+            {
+                name: "rackSystemId",
+                label: "Стеллажное оборудование",
+                type: "select",
+                span: "full",
+                emptyOption: "Не закупается — роботизация на существующих стеллажах",
+                hint: `Цены поставщиков из каталога стеллажей${
+                    p.palletPlaces ? `; в CAPEX войдёт ${p.palletPlaces} мест хранения` : ""
+                }`,
+            },
         ],
     },
     {
@@ -197,7 +208,13 @@ export function ProjectEconomics() {
                 getValue={(name) => econ[name] as string | number | boolean}
                 onChange={handleChange}
                 getOptions={(name) =>
-                    name === "workMode" ? WORK_MODES : name === "floorFlatness" ? FLOOR_FLATNESS : []
+                    name === "workMode"
+                        ? WORK_MODES
+                        : name === "floorFlatness"
+                          ? FLOOR_FLATNESS
+                          : name === "rackSystemId"
+                            ? pricedRacksFor(formData.rackType).map((r) => ({ value: r.id, label: rackLabel(r) }))
+                            : []
                 }
                 getLimit={(name) => ECON_LIMITS[name]}
                 intro={{

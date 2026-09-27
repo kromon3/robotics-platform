@@ -27,7 +27,10 @@
       "navigation": "QR-метки и SLAM",
       "manufacturer": "Ronavi Robotics",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_height_mm": 0,
+      "lift_residual_payload_kg": 0,
+      "sheet_id": "R-101"
     }
   },
   {
@@ -58,7 +61,10 @@
       "navigation": "QR-метки и SLAM",
       "manufacturer": "Ronavi Robotics",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_height_mm": 0,
+      "lift_residual_payload_kg": 0,
+      "sheet_id": "R-102"
     }
   },
   {
@@ -89,7 +95,9 @@
       "navigation": "SLAM",
       "manufacturer": "Ronavi Robotics",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_residual_payload_kg": 0,
+      "sheet_id": "R-103"
     }
   },
   {
@@ -118,7 +126,8 @@
       "charge_h": 2,
       "manufacturer": "Ronavi Robotics",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "sheet_id": "R-104"
     }
   },
   {
@@ -147,7 +156,10 @@
       "charge_h": 2,
       "manufacturer": "Ronavi Robotics",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_height_mm": 0,
+      "lift_residual_payload_kg": 0,
+      "sheet_id": "R-105"
     }
   },
   {
@@ -179,7 +191,10 @@
       "navigation": "3D Laser SLAM",
       "manufacturer": "Automacon",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_residual_payload_kg": 0,
+      "table_lift_height_mm": 0,
+      "sheet_id": "R-106"
     }
   },
   {
@@ -211,7 +226,10 @@
       "navigation": "3D Laser SLAM",
       "manufacturer": "Automacon",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_residual_payload_kg": 0,
+      "table_lift_height_mm": 0,
+      "sheet_id": "R-107"
     }
   },
   {
@@ -243,7 +261,10 @@
       "navigation": "3D Laser SLAM",
       "manufacturer": "Automacon",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_residual_payload_kg": 0,
+      "table_lift_height_mm": 0,
+      "sheet_id": "R-108"
     }
   },
   {
@@ -275,7 +296,10 @@
       "navigation": "3D Laser SLAM",
       "manufacturer": "Automacon",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_residual_payload_kg": 0,
+      "table_lift_height_mm": 0,
+      "sheet_id": "R-109"
     }
   },
   {
@@ -339,7 +363,10 @@
       "navigation": "3D Laser SLAM",
       "manufacturer": "Automacon",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_residual_payload_kg": 0,
+      "table_lift_height_mm": 0,
+      "sheet_id": "R-111"
     }
   },
   {
@@ -358,7 +385,7 @@
       "width_mm": 545,
       "height_mm": 250,
       "lift_height_mm": 60,
-      "table_lift_height_mm": 60,
+      "table_lift_height_mm": 0,
       "slope_pct": 2,
       "cargo_box_l_mm": 700,
       "cargo_box_w_mm": 520,
@@ -369,10 +396,12 @@
       "charge_h": 1,
       "battery": "LiFePO4",
       "mass_kg": 96,
-      "navigation": "QR-code, LSLAM, VSLAM",
+      "navigation": "QR-code / LSLAM / VSLAM",
       "manufacturer": "Automacon",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_residual_payload_kg": 0,
+      "sheet_id": "R-112"
     }
   },
   {
@@ -391,7 +420,7 @@
       "width_mm": 650,
       "height_mm": 250,
       "lift_height_mm": 60,
-      "table_lift_height_mm": 60,
+      "table_lift_height_mm": 0,
       "slope_pct": 2,
       "cargo_box_l_mm": 850,
       "cargo_box_w_mm": 600,
@@ -402,10 +431,12 @@
       "charge_h": 1.5,
       "battery": "LiFePO4",
       "mass_kg": 130,
-      "navigation": "QR-code, LSLAM, VSLAM",
+      "navigation": "QR-code / LSLAM / VSLAM",
       "manufacturer": "Automacon",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_residual_payload_kg": 0,
+      "sheet_id": "R-113"
     }
   },
   {
@@ -419,13 +450,13 @@
     "verified": true,
     "specs": {
       "robot_type": "AMR",
-      "payload_kg": 1000,
+      "payload_kg": 1500,
       "payload_note": "1000–1500",
       "length_mm": 1150,
       "width_mm": 820,
       "height_mm": 250,
       "lift_height_mm": 60,
-      "table_lift_height_mm": 60,
+      "table_lift_height_mm": 0,
       "slope_pct": 2,
       "cargo_box_l_mm": 1050,
       "cargo_box_w_mm": 740,
@@ -436,10 +467,12 @@
       "charge_h": 2,
       "battery": "LiFePO4",
       "mass_kg": 185,
-      "navigation": "QR-code, LSLAM, VSLAM",
+      "navigation": "QR-code / LSLAM / VSLAM",
       "manufacturer": "Automacon",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_residual_payload_kg": 0,
+      "sheet_id": "R-114"
     }
   },
   {
@@ -458,7 +491,7 @@
       "width_mm": 1150,
       "height_mm": 325,
       "lift_height_mm": 100,
-      "table_lift_height_mm": 100,
+      "table_lift_height_mm": 0,
       "slope_pct": 2,
       "cargo_box_l_mm": 1420,
       "cargo_box_w_mm": 1050,
@@ -469,10 +502,12 @@
       "charge_h": 2.2,
       "battery": "LiFePO4",
       "mass_kg": 525,
-      "navigation": "QR-code, LSLAM, VSLAM",
+      "navigation": "QR-code / LSLAM / VSLAM",
       "manufacturer": "Automacon",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_residual_payload_kg": 0,
+      "sheet_id": "R-115"
     }
   },
   {
@@ -501,10 +536,11 @@
       "charge_h": 1.5,
       "battery": "LiFePO4",
       "mass_kg": 300,
-      "navigation": "QR-code, LSLAM",
+      "navigation": "QR-code / LSLAM",
       "manufacturer": "Automacon",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "sheet_id": "R-116"
     }
   },
   {
@@ -514,10 +550,10 @@
     "priceRub": 1400000,
     "photo": "R-117.webp",
     "sourceUrl": "https://ronavi-robotics.ru/catalogue/",
-    "sourceDate": "2026-09-24",
+    "sourceDate": "46289",
     "verified": true,
     "specs": {
-      "robot_type": "AMR",
+      "robot_type": "SR",
       "payload_kg": 10,
       "length_mm": 420,
       "width_mm": 400,
@@ -531,7 +567,11 @@
       "navigation": "QR-коды",
       "manufacturer": "Ronavi Robotics",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "slope_pct": 2,
+      "speed_mps": 2.5,
+      "charge_h": 2,
+      "sheet_id": "R-117"
     }
   },
   {
@@ -541,7 +581,7 @@
     "priceRub": 1500000,
     "photo": "R-118.png",
     "sourceUrl": "https://морос.рф",
-    "sourceDate": "2026-09-24",
+    "sourceDate": "46289",
     "verified": true,
     "specs": {
       "robot_type": "AMR",
@@ -553,14 +593,17 @@
       "cargo_box_l_mm": 450,
       "cargo_box_w_mm": 400,
       "positioning_mm": 10,
-      "gripper": "Подъёмный стол",
+      "gripper": "Плоская платформа",
       "runtime_h": 20,
       "speed_mps": 3,
       "mass_kg": 25,
       "navigation": "QR-метки, SLAM",
       "manufacturer": "МОРОС",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "slope_pct": 2,
+      "charge_h": 2,
+      "sheet_id": "R-118"
     }
   },
   {
@@ -570,7 +613,7 @@
     "priceRub": 1800000,
     "photo": "R-119.png",
     "sourceUrl": "https://морос.рф",
-    "sourceDate": "2026-09-24",
+    "sourceDate": "46289",
     "verified": true,
     "specs": {
       "robot_type": "AMR",
@@ -584,14 +627,17 @@
       "cargo_box_l_mm": 900,
       "cargo_box_w_mm": 600,
       "positioning_mm": 10,
-      "gripper": "Подъёмный стол",
+      "gripper": "Плоская платформа",
       "runtime_h": 24,
       "speed_mps": 2,
       "mass_kg": 150,
       "navigation": "QR-метки, SLAM",
       "manufacturer": "МОРОС",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "slope_pct": 2,
+      "charge_h": 2,
+      "sheet_id": "R-119"
     }
   },
   {
@@ -601,7 +647,7 @@
     "priceRub": 2200000,
     "photo": "R-120.png",
     "sourceUrl": "https://морос.рф",
-    "sourceDate": "2026-09-24",
+    "sourceDate": "46289",
     "verified": true,
     "specs": {
       "robot_type": "AMR",
@@ -615,14 +661,17 @@
       "cargo_box_l_mm": 1080,
       "cargo_box_w_mm": 640,
       "positioning_mm": 10,
-      "gripper": "Подъёмный стол",
+      "gripper": "Плоская платформа",
       "runtime_h": 20,
       "speed_mps": 1.5,
       "mass_kg": 200,
       "navigation": "QR-метки, SLAM",
       "manufacturer": "МОРОС",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "slope_pct": 2,
+      "charge_h": 2,
+      "sheet_id": "R-120"
     }
   },
   {
@@ -632,7 +681,7 @@
     "priceRub": 4000000,
     "photo": "R-121.webp",
     "sourceUrl": "https://dikom-a.ru",
-    "sourceDate": "2026-09-24",
+    "sourceDate": "46289",
     "verified": true,
     "specs": {
       "robot_type": "AMR",
@@ -654,7 +703,11 @@
       "navigation": "SLAM (лидар)",
       "manufacturer": "ДиКом",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_height_mm": 60,
+      "lift_residual_payload_kg": 0,
+      "slope_pct": 2,
+      "sheet_id": "R-121"
     }
   },
   {
@@ -664,7 +717,7 @@
     "priceRub": 3750000,
     "photo": "R-122.png",
     "sourceUrl": "https://dikom-a.ru",
-    "sourceDate": "2026-09-24",
+    "sourceDate": "46289",
     "verified": true,
     "specs": {
       "robot_type": "AMR",
@@ -687,7 +740,10 @@
       "navigation": "SLAM + QR-метки",
       "manufacturer": "ДиКом",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_height_mm": 60,
+      "lift_residual_payload_kg": 0,
+      "sheet_id": "R-122"
     }
   },
   {
@@ -718,7 +774,7 @@
     "priceRub": 4300000,
     "photo": "R-124.webp",
     "sourceUrl": "https://dikom-a.ru",
-    "sourceDate": "2026-09-24",
+    "sourceDate": "46289",
     "verified": true,
     "specs": {
       "robot_type": "FMR",
@@ -739,7 +795,9 @@
       "navigation": "SLAM",
       "manufacturer": "ДиКом",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "charge_h": 2,
+      "sheet_id": "R-123"
     }
   },
   {
@@ -903,7 +961,7 @@
     "priceRub": 2500000,
     "photo": "R-131.png",
     "sourceUrl": "https://robocv.ru",
-    "sourceDate": "2026-09-24",
+    "sourceDate": "46289",
     "verified": true,
     "specs": {
       "robot_type": "FMR",
@@ -923,7 +981,13 @@
       "navigation": "Лидары, одометрия, безынфраструктурная",
       "manufacturer": "RoboCV",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_residual_payload_kg": 0,
+      "slope_pct": 4,
+      "cargo_custom_l_mm": 1200,
+      "cargo_custom_w_mm": 1000,
+      "charge_h": 2,
+      "sheet_id": "R-124"
     }
   },
   {
@@ -933,7 +997,7 @@
     "priceRub": 2500000,
     "photo": "R-132.png",
     "sourceUrl": "https://robocv.ru",
-    "sourceDate": "2026-09-24",
+    "sourceDate": "46289",
     "verified": true,
     "specs": {
       "robot_type": "UGV",
@@ -942,7 +1006,7 @@
       "width_mm": 800,
       "height_mm": 2200,
       "positioning_mm": 30,
-      "gripper": "Кастомный крюк",
+      "gripper": "Вилы",
       "runtime_h": 24,
       "speed_mps": 2.2,
       "battery": "Li-ion / Pb",
@@ -950,7 +1014,14 @@
       "navigation": "Лазерная (лидары)",
       "manufacturer": "RoboCV",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "slope_pct": 4,
+      "cargo_pallet_l_mm": 1200,
+      "cargo_pallet_w_mm": 800,
+      "cargo_custom_l_mm": 1200,
+      "cargo_custom_w_mm": 1000,
+      "charge_h": 2,
+      "sheet_id": "R-125"
     }
   },
   {
@@ -1161,7 +1232,7 @@
     "priceRub": 10000000,
     "photo": "R-142.webp",
     "sourceUrl": "https://dikom-a.ru",
-    "sourceDate": "2026-09-24",
+    "sourceDate": "46289",
     "verified": true,
     "specs": {
       "robot_type": "ASRS",
@@ -1172,7 +1243,17 @@
       "navigation": "Рельсовая",
       "manufacturer": "ДиКом",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "length_mm": 1300,
+      "width_mm": 900,
+      "height_mm": 125,
+      "lift_height_mm": 12000,
+      "lift_residual_payload_kg": 0,
+      "table_lift_height_mm": 60,
+      "gripper": "Подъёмный стол",
+      "speed_mps": 2,
+      "warehouse_height_m": 12,
+      "sheet_id": "R-126"
     }
   },
   {
@@ -1182,7 +1263,7 @@
     "priceRub": 10000000,
     "photo": "R-143.webp",
     "sourceUrl": "https://dikom-a.ru",
-    "sourceDate": "2026-09-24",
+    "sourceDate": "46289",
     "verified": true,
     "specs": {
       "robot_type": "ASRS",
@@ -1194,7 +1275,16 @@
       "navigation": "Рельсовая",
       "manufacturer": "ДиКом",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "length_mm": 1300,
+      "width_mm": 900,
+      "height_mm": 125,
+      "lift_height_mm": 12000,
+      "lift_residual_payload_kg": 0,
+      "table_lift_height_mm": 60,
+      "gripper": "Подъёмный стол",
+      "warehouse_height_m": 12,
+      "sheet_id": "R-127"
     }
   },
   {
@@ -1204,7 +1294,7 @@
     "priceRub": 7000000,
     "photo": "R-144.jpg",
     "sourceUrl": "https://mujin-corp.com",
-    "sourceDate": "2026-09-24",
+    "sourceDate": "46289",
     "verified": true,
     "specs": {
       "robot_type": "ASRS",
@@ -1220,7 +1310,16 @@
       "navigation": "Рельсовая",
       "manufacturer": "Разные производители",
       "country": "Россия",
-      "availability": "В продаже"
+      "availability": "В продаже",
+      "lift_height_mm": 12000,
+      "lift_residual_payload_kg": 0,
+      "table_lift_height_mm": 60,
+      "cargo_custom_l_mm": 1200,
+      "cargo_custom_w_mm": 1000,
+      "gripper": "Подъёмный стол",
+      "speed_mps": 2,
+      "warehouse_height_m": 12,
+      "sheet_id": "R-128"
     }
   },
   {
@@ -1321,6 +1420,528 @@
       "manufacturer": "Droneshub Group",
       "country": "Россия",
       "availability": "В продаже"
+    }
+  },
+  {
+    "catalogId": "R-149",
+    "name": "Galaxis FM100Q",
+    "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+    "priceRub": 900000,
+    "photo": null,
+    "sourceUrl": "https://en.galaxis-tech.com (каталог AMR Robot Solutions, PDF предоставлен пользователем)",
+    "sourceDate": "2026-09-26",
+    "verified": false,
+    "specs": {
+      "robot_type": "AMR",
+      "payload_kg": 100,
+      "length_mm": 720,
+      "width_mm": 500,
+      "height_mm": 320,
+      "lift_height_mm": 60,
+      "lift_residual_payload_kg": 0,
+      "table_lift_height_mm": 60,
+      "slope_pct": 6,
+      "cargo_box_l_mm": 720,
+      "cargo_box_w_mm": 500,
+      "positioning_mm": 5,
+      "gripper": "Подъёмный стол",
+      "runtime_h": 12,
+      "speed_mps": 2.2,
+      "charge_h": 1.5,
+      "lift_drive": "Электрический (ШВП)",
+      "battery": "Li-ion",
+      "mass_kg": 90,
+      "navigation": "QR-метки",
+      "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+      "country": "Китай",
+      "availability": "В продаже",
+      "sheet_id": "R-129"
+    }
+  },
+  {
+    "catalogId": "R-150",
+    "name": "Galaxis FM300QS",
+    "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+    "priceRub": 1300000,
+    "photo": null,
+    "sourceUrl": "https://en.galaxis-tech.com (каталог AMR Robot Solutions, PDF предоставлен пользователем)",
+    "sourceDate": "2026-09-26",
+    "verified": false,
+    "specs": {
+      "robot_type": "AMR",
+      "payload_kg": 300,
+      "length_mm": 840,
+      "width_mm": 600,
+      "height_mm": 290,
+      "lift_height_mm": 60,
+      "lift_residual_payload_kg": 0,
+      "table_lift_height_mm": 80,
+      "slope_pct": 6,
+      "cargo_box_l_mm": 840,
+      "cargo_box_w_mm": 600,
+      "positioning_mm": 5,
+      "gripper": "Подъёмный стол",
+      "runtime_h": 8,
+      "speed_mps": 2.2,
+      "charge_h": 1.5,
+      "lift_drive": "Электрический (ШВП)",
+      "battery": "Li-ion",
+      "mass_kg": 135,
+      "navigation": "QR-метки и SLAM",
+      "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+      "country": "Китай",
+      "availability": "В продаже",
+      "sheet_id": "R-130"
+    }
+  },
+  {
+    "catalogId": "R-151",
+    "name": "Galaxis FM1000QS",
+    "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+    "priceRub": 2200000,
+    "photo": null,
+    "sourceUrl": "https://en.galaxis-tech.com (каталог AMR Robot Solutions, PDF предоставлен пользователем)",
+    "sourceDate": "2026-09-26",
+    "verified": false,
+    "specs": {
+      "robot_type": "AMR",
+      "payload_kg": 1000,
+      "length_mm": 1150,
+      "width_mm": 820,
+      "height_mm": 315,
+      "lift_height_mm": 60,
+      "lift_residual_payload_kg": 0,
+      "table_lift_height_mm": 50,
+      "slope_pct": 6,
+      "cargo_box_l_mm": 1150,
+      "cargo_box_w_mm": 820,
+      "positioning_mm": 5,
+      "gripper": "Подъёмный стол",
+      "runtime_h": 8,
+      "speed_mps": 1.2,
+      "charge_h": 1.5,
+      "lift_drive": "Электрический (ШВП)",
+      "battery": "Li-ion",
+      "mass_kg": 260,
+      "navigation": "QR-метки и SLAM",
+      "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+      "country": "Китай",
+      "availability": "В продаже",
+      "sheet_id": "R-131"
+    }
+  },
+  {
+    "catalogId": "R-152",
+    "name": "Galaxis FM1500QS",
+    "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+    "priceRub": 2800000,
+    "photo": null,
+    "sourceUrl": "https://en.galaxis-tech.com (каталог AMR Robot Solutions, PDF предоставлен пользователем)",
+    "sourceDate": "2026-09-26",
+    "verified": false,
+    "specs": {
+      "robot_type": "AMR",
+      "payload_kg": 1500,
+      "length_mm": 1600,
+      "width_mm": 900,
+      "height_mm": 370,
+      "lift_height_mm": 60,
+      "lift_residual_payload_kg": 0,
+      "table_lift_height_mm": 5,
+      "slope_pct": 6,
+      "cargo_pallet_l_mm": 1200,
+      "cargo_pallet_w_mm": 800,
+      "positioning_mm": 10,
+      "gripper": "Подъёмный стол",
+      "runtime_h": 8,
+      "speed_mps": 1.2,
+      "charge_h": 1.5,
+      "lift_drive": "Электрический (одинарный)",
+      "battery": "Li-ion",
+      "mass_kg": 700,
+      "navigation": "QR-метки и SLAM",
+      "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+      "country": "Китай",
+      "availability": "В продаже",
+      "sheet_id": "R-132"
+    }
+  },
+  {
+    "catalogId": "R-153",
+    "name": "Galaxis FM2000QS",
+    "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+    "priceRub": 3400000,
+    "photo": null,
+    "sourceUrl": "https://en.galaxis-tech.com (каталог AMR Robot Solutions, PDF предоставлен пользователем)",
+    "sourceDate": "2026-09-26",
+    "verified": false,
+    "specs": {
+      "robot_type": "AMR",
+      "payload_kg": 2000,
+      "length_mm": 1900,
+      "width_mm": 1200,
+      "height_mm": 370,
+      "lift_height_mm": 60,
+      "lift_residual_payload_kg": 0,
+      "table_lift_height_mm": 5,
+      "slope_pct": 6,
+      "cargo_pallet_l_mm": 1200,
+      "cargo_pallet_w_mm": 800,
+      "positioning_mm": 10,
+      "gripper": "Подъёмный стол",
+      "runtime_h": 8,
+      "speed_mps": 1.2,
+      "charge_h": 1.5,
+      "lift_drive": "Гидравлический",
+      "battery": "Li-ion",
+      "mass_kg": 800,
+      "navigation": "QR-метки и SLAM",
+      "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+      "country": "Китай",
+      "availability": "В продаже",
+      "sheet_id": "R-133"
+    }
+  },
+  {
+    "catalogId": "R-154",
+    "name": "Galaxis FM3000QS",
+    "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+    "priceRub": 4600000,
+    "photo": null,
+    "sourceUrl": "https://en.galaxis-tech.com (каталог AMR Robot Solutions, PDF предоставлен пользователем)",
+    "sourceDate": "2026-09-26",
+    "verified": false,
+    "specs": {
+      "robot_type": "AMR",
+      "payload_kg": 3000,
+      "length_mm": 2000,
+      "width_mm": 1400,
+      "height_mm": 480,
+      "lift_height_mm": 60,
+      "lift_residual_payload_kg": 0,
+      "table_lift_height_mm": 5,
+      "slope_pct": 6,
+      "cargo_pallet_l_mm": 1200,
+      "cargo_pallet_w_mm": 800,
+      "positioning_mm": 10,
+      "gripper": "Подъёмный стол",
+      "runtime_h": 8,
+      "speed_mps": 1.2,
+      "charge_h": 1.5,
+      "lift_drive": "Гидравлический",
+      "battery": "Li-ion",
+      "mass_kg": 900,
+      "navigation": "QR-метки и SLAM",
+      "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+      "country": "Китай",
+      "availability": "В продаже",
+      "sheet_id": "R-134"
+    }
+  },
+  {
+    "catalogId": "R-155",
+    "name": "Galaxis FR100QS",
+    "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+    "priceRub": 850000,
+    "photo": null,
+    "sourceUrl": "https://en.galaxis-tech.com (каталог AMR Robot Solutions, PDF предоставлен пользователем)",
+    "sourceDate": "2026-09-26",
+    "verified": false,
+    "specs": {
+      "robot_type": "AMR",
+      "payload_kg": 50,
+      "length_mm": 720,
+      "width_mm": 500,
+      "height_mm": 520,
+      "slope_pct": 6,
+      "cargo_box_l_mm": 720,
+      "cargo_box_w_mm": 500,
+      "positioning_mm": 5,
+      "gripper": "Конвейерная платформа",
+      "runtime_h": 12,
+      "speed_mps": 2.2,
+      "charge_h": 1.5,
+      "battery": "Li-ion",
+      "mass_kg": 100,
+      "navigation": "QR-метки и SLAM",
+      "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+      "country": "Китай",
+      "availability": "В продаже",
+      "sheet_id": "R-135"
+    }
+  },
+  {
+    "catalogId": "R-156",
+    "name": "Galaxis FR500Q",
+    "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+    "priceRub": 1800000,
+    "photo": null,
+    "sourceUrl": "https://en.galaxis-tech.com (каталог AMR Robot Solutions, PDF предоставлен пользователем)",
+    "sourceDate": "2026-09-26",
+    "verified": false,
+    "specs": {
+      "robot_type": "AMR",
+      "payload_kg": 500,
+      "length_mm": 940,
+      "width_mm": 690,
+      "height_mm": 520,
+      "slope_pct": 6,
+      "cargo_box_l_mm": 940,
+      "cargo_box_w_mm": 690,
+      "positioning_mm": 5,
+      "gripper": "Конвейерная платформа",
+      "runtime_h": 6,
+      "speed_mps": 2.2,
+      "charge_h": 1.5,
+      "battery": "Li-ion",
+      "mass_kg": 220,
+      "navigation": "QR-метки",
+      "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+      "country": "Китай",
+      "availability": "В продаже",
+      "sheet_id": "R-136"
+    }
+  },
+  {
+    "catalogId": "R-157",
+    "name": "Galaxis FS1Q",
+    "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+    "priceRub": 2500000,
+    "photo": null,
+    "sourceUrl": "https://en.galaxis-tech.com (каталог AMR Robot Solutions, PDF предоставлен пользователем)",
+    "sourceDate": "2026-09-26",
+    "verified": false,
+    "specs": {
+      "robot_type": "CTU",
+      "payload_kg": 40,
+      "length_mm": 1150,
+      "width_mm": 820,
+      "height_mm": 5000,
+      "lift_height_mm": 4550,
+      "lift_residual_payload_kg": 40,
+      "slope_pct": 3,
+      "cargo_box_l_mm": 500,
+      "cargo_box_w_mm": 600,
+      "positioning_mm": 5,
+      "gripper": "Кастомный крюк",
+      "runtime_h": 8,
+      "speed_mps": 1.2,
+      "charge_h": 1.5,
+      "battery": "Li-ion",
+      "mass_kg": 300,
+      "navigation": "QR-метки",
+      "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+      "country": "Китай",
+      "availability": "В продаже",
+      "sheet_id": "R-137"
+    }
+  },
+  {
+    "catalogId": "R-158",
+    "name": "Galaxis FS3Q",
+    "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+    "priceRub": 2800000,
+    "photo": null,
+    "sourceUrl": "https://en.galaxis-tech.com (каталог AMR Robot Solutions, PDF предоставлен пользователем)",
+    "sourceDate": "2026-09-26",
+    "verified": false,
+    "specs": {
+      "robot_type": "CTU",
+      "payload_kg": 30,
+      "length_mm": 1400,
+      "width_mm": 900,
+      "height_mm": 5000,
+      "lift_height_mm": 4550,
+      "lift_residual_payload_kg": 30,
+      "slope_pct": 3,
+      "cargo_box_l_mm": 800,
+      "cargo_box_w_mm": 600,
+      "positioning_mm": 5,
+      "gripper": "Кастомный крюк",
+      "runtime_h": 10,
+      "speed_mps": 1.5,
+      "charge_h": 1.5,
+      "battery": "Li-ion",
+      "mass_kg": 350,
+      "navigation": "QR-метки",
+      "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+      "country": "Китай",
+      "availability": "В продаже",
+      "sheet_id": "R-138"
+    }
+  },
+  {
+    "catalogId": "R-159",
+    "name": "Galaxis FS1NQS",
+    "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+    "priceRub": 2600000,
+    "photo": null,
+    "sourceUrl": "https://en.galaxis-tech.com (каталог AMR Robot Solutions, PDF предоставлен пользователем)",
+    "sourceDate": "2026-09-26",
+    "verified": false,
+    "specs": {
+      "robot_type": "CTU",
+      "payload_kg": 30,
+      "length_mm": 1730,
+      "width_mm": 950,
+      "height_mm": 4565,
+      "lift_height_mm": 4000,
+      "lift_residual_payload_kg": 30,
+      "slope_pct": 3,
+      "cargo_box_l_mm": 1000,
+      "cargo_box_w_mm": 600,
+      "positioning_mm": 10,
+      "gripper": "Кастомный крюк",
+      "runtime_h": 7,
+      "speed_mps": 1.5,
+      "charge_h": 1.5,
+      "battery": "Li-ion",
+      "mass_kg": 720,
+      "navigation": "QR-метки и SLAM",
+      "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+      "country": "Китай",
+      "availability": "В продаже",
+      "sheet_id": "R-139"
+    }
+  },
+  {
+    "catalogId": "R-160",
+    "name": "Galaxis PTR CL1QS (Cyber Lift)",
+    "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+    "priceRub": 3800000,
+    "photo": null,
+    "sourceUrl": "https://en.galaxis-tech.com (каталог AMR Robot Solutions, PDF предоставлен пользователем)",
+    "sourceDate": "2026-09-26",
+    "verified": false,
+    "specs": {
+      "robot_type": "FMR",
+      "payload_kg": 1000,
+      "length_mm": 1500,
+      "width_mm": 1500,
+      "height_mm": 3080,
+      "lift_height_mm": 2000,
+      "lift_residual_payload_kg": 1000,
+      "slope_pct": 3,
+      "cargo_pallet_l_mm": 1200,
+      "cargo_pallet_w_mm": 800,
+      "positioning_mm": 10,
+      "gripper": "Вилы",
+      "runtime_h": 8,
+      "speed_mps": 1.2,
+      "charge_h": 1.5,
+      "lift_drive": "Электрический (ШВП)",
+      "battery": "Li-ion",
+      "mass_kg": 1000,
+      "navigation": "QR-метки и SLAM",
+      "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+      "country": "Китай",
+      "availability": "В продаже",
+      "sheet_id": "R-140"
+    }
+  },
+  {
+    "catalogId": "R-161",
+    "name": "Galaxis PTR CL2QS (Cyber Lift)",
+    "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+    "priceRub": 4200000,
+    "photo": null,
+    "sourceUrl": "https://en.galaxis-tech.com (каталог AMR Robot Solutions, PDF предоставлен пользователем)",
+    "sourceDate": "2026-09-26",
+    "verified": false,
+    "specs": {
+      "robot_type": "FMR",
+      "payload_kg": 1200,
+      "length_mm": 1500,
+      "width_mm": 1500,
+      "height_mm": 3080,
+      "lift_height_mm": 2000,
+      "lift_residual_payload_kg": 1200,
+      "slope_pct": 3,
+      "cargo_pallet_l_mm": 1200,
+      "cargo_pallet_w_mm": 800,
+      "positioning_mm": 10,
+      "gripper": "Вилы",
+      "runtime_h": 8,
+      "speed_mps": 1.2,
+      "charge_h": 1.5,
+      "lift_drive": "Электрический (ШВП)",
+      "battery": "Li-ion",
+      "mass_kg": 1200,
+      "navigation": "QR-метки и SLAM",
+      "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+      "country": "Китай",
+      "availability": "В продаже",
+      "sheet_id": "R-141"
+    }
+  },
+  {
+    "catalogId": "R-162",
+    "name": "Galaxis MR1000S",
+    "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+    "priceRub": 5500000,
+    "photo": null,
+    "sourceUrl": "https://en.galaxis-tech.com (каталог AMR Robot Solutions, PDF предоставлен пользователем)",
+    "sourceDate": "2026-09-26",
+    "verified": false,
+    "specs": {
+      "robot_type": "AGV",
+      "payload_kg": 2052,
+      "length_mm": 1640,
+      "width_mm": 990,
+      "height_mm": 1990,
+      "lift_height_mm": 1950,
+      "lift_residual_payload_kg": 2052,
+      "slope_pct": 3,
+      "cargo_pallet_l_mm": 1200,
+      "cargo_pallet_w_mm": 800,
+      "positioning_mm": 10,
+      "gripper": "Вилы",
+      "runtime_h": 8,
+      "speed_mps": 1.2,
+      "charge_h": 1.5,
+      "lift_drive": "Гидравлический",
+      "battery": "Li-ion",
+      "mass_kg": 795,
+      "navigation": "Лазерные рефлекторы",
+      "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+      "country": "Китай",
+      "availability": "В продаже",
+      "sheet_id": "R-142"
+    }
+  },
+  {
+    "catalogId": "R-163",
+    "name": "Galaxis MR1500S",
+    "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+    "priceRub": 5000000,
+    "photo": null,
+    "sourceUrl": "https://en.galaxis-tech.com (каталог AMR Robot Solutions, PDF предоставлен пользователем)",
+    "sourceDate": "2026-09-26",
+    "verified": false,
+    "specs": {
+      "robot_type": "AGV",
+      "payload_kg": 2200,
+      "length_mm": 1620,
+      "width_mm": 910,
+      "height_mm": 1940,
+      "lift_height_mm": 125,
+      "lift_residual_payload_kg": 2200,
+      "slope_pct": 3,
+      "cargo_pallet_l_mm": 1200,
+      "cargo_pallet_w_mm": 800,
+      "positioning_mm": 10,
+      "gripper": "Вилы",
+      "runtime_h": 8,
+      "speed_mps": 1.5,
+      "charge_h": 1.5,
+      "lift_drive": "Гидравлический",
+      "battery": "Li-ion",
+      "mass_kg": 450,
+      "navigation": "Лазерные рефлекторы",
+      "manufacturer": "Zhejiang Galaxis Technology group Co.Ltd",
+      "country": "Китай",
+      "availability": "В продаже",
+      "sheet_id": "R-143"
     }
   }
 ]

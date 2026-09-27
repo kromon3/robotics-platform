@@ -38,6 +38,8 @@ export interface EconFormData {
     activeAreaM2: NumField;
     floors: NumField;
     floorFlatness: FloorFlatness | "";
+    /** id системы из листа «Стеллажи» (src/viz/rackCatalog.ts); пусто — стеллажи в проект не входят */
+    rackSystemId: string;
     // D. Режим работы (значения подставляются пресетом, пользователь может поправить)
     workMode: WorkMode | "";
     workingDaysPerYear: NumField;
@@ -70,7 +72,7 @@ export interface EconFormData {
 export type EconFieldName = keyof EconFormData;
 
 const EMPTY: EconFormData = {
-    activeAreaM2: "", floors: "", floorFlatness: "",
+    activeAreaM2: "", floors: "", floorFlatness: "", rackSystemId: "",
     workMode: "", workingDaysPerYear: "", shiftHours: "", shiftsPerDay: "", peakFactor: "",
     staffTotal: "", staffPickers: "", staffForklift: "", staffPackers: "", salaryPicker: "", salaryForklift: "",
     payrollTaxPct: 30.2, pickerLinesPerHour: "", timeLossFactor: "",
@@ -81,7 +83,7 @@ const EMPTY: EconFormData = {
 
 /** Демо-склад из датасета «Склад» (§2 документа экономистов) */
 export const ECON_EXAMPLE: EconFormData = {
-    activeAreaM2: 960, floors: 1, floorFlatness: "din18202",
+    activeAreaM2: 960, floors: 1, floorFlatness: "din18202", rackSystemId: "",
     workMode: "continuous", workingDaysPerYear: 365, shiftHours: 11, shiftsPerDay: 2, peakFactor: 1.5,
     staffTotal: 40, staffPickers: 10, staffForklift: 25, staffPackers: 5,
     salaryPicker: 100_000, salaryForklift: 120_000, payrollTaxPct: 30.2,

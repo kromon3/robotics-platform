@@ -70,7 +70,7 @@ export function ProjectResult() {
         return {
             site: toSiteInput(toNumericFormData(formData), hasEcon ? econNumeric : undefined),
             robot: { name: robot.name, price: robot.price, throughputPerHour: robot.throughputPerHour },
-            norms: toNorms(hasEcon ? econNumeric : undefined),
+            norms: toNorms(hasEcon ? econNumeric : undefined, undefined, toNumericFormData(formData)),
         };
     }, [product, formData, econNumeric, hasEcon]);
 

@@ -6,6 +6,8 @@ import type { Product, ProductsResponse } from "../api/catalog.ts";
 import { CARGO_TYPES, RACK_TYPES, getInvalidFields, getMissingFields, toNumericFormData, useProjectStore } from "../store/store";
 import { toVizRobot, type VizRobot } from "../viz/robotSpecs";
 import { checkCompat, minAisle } from "../viz/core/rules";
+import { checkLift } from "../viz/liftRules";
+import { m, rackTier } from "../viz/rackSpecs";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -76,6 +78,9 @@ export function ProjectOffers() {
             const aisle = robot.type === "ASRS" ? 0 : minAisle(robot, cargo);
             if (aisle > p.aisleWidth + 0.5)
                 reasons.push(`Нужен проход не уже ${aisle} м, у вас ${p.aisleWidth} м`);
+            // Паспортная высота подъёма против высоты верхнего яруса выбранного стеллажа
+            if (product.type !== "software")
+                reasons.push(...checkLift(robot, p.rackType, p.cargoType, cargo.unit.massKg));
             return { product, robot, reasons, minAisle: aisle };
         });
         return {
@@ -90,7 +95,16 @@ export function ProjectOffers() {
     const cargoLabel = CARGO_TYPES.find((c) => c.value === p.cargoType)?.label ?? "";
     const dailyOrders = p.cargoType === "pallet" ? Math.round((p.receivePalletsDay + p.shipPalletsDay) / 2) : p.pickLinesDay;
     const ordersPerHour = p.workHours > 0 ? Math.round(dailyOrders / p.workHours) : 0;
-    const summary = [`${p.width} × ${p.length} м`, rackLabel, cargoLabel, `проход ${p.aisleWidth} м`, `${p.palletPlaces} паллетомест`, `${ordersPerHour} заказов/ч`];
+    const tier = rackTier(p.rackType, p.cargoType);
+    const summary = [
+        `${p.width} × ${p.length} м`,
+        rackLabel,
+        cargoLabel,
+        `проход ${p.aisleWidth} м`,
+        `${p.palletPlaces} паллетомест`,
+        `${ordersPerHour} заказов/ч`,
+        ...(tier ? [`верхний ярус ${m(tier.topTierMm)} м`] : []),
+    ];
 
     const choose = (id: string) => {
         selectProduct(id);
@@ -112,7 +126,7 @@ export function ProjectOffers() {
                     ))}
                 </div>
                 <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-                    Проверено: совместимость со стеллажом и грузом, грузоподъёмность, ширина прохода. Выберите робота — построим схему склада, имитацию и три сценария.
+                    Проверено: совместимость со стеллажом и грузом, грузоподъёмность, ширина прохода, высота подъёма до верхнего яруса и грузоподъёмность на высоте. Выберите робота — построим схему склада, имитацию и три сценария.
                 </p>
             </div>
 

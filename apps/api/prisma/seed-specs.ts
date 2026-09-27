@@ -48,6 +48,29 @@ const SUBTYPE_BY_TYPE: Record<string, string> = {
   DOG: 'Робособака', HUM: 'Гуманоид', ASRS: 'Стационарная система',
 };
 
+// Сценарии, в которых участвует складской робот. Сортировочные тележки и шаттлы —
+// ещё и в сортировке грузов; названия те же, что в каталоге организатора.
+const WAREHOUSE_SCENARIOS = ['Внутрискладская логистика', 'Внутрипроизводственная логистика'];
+const SORTING_TYPES = ['SR', 'CTU', 'ASRS'];
+
+async function linkWarehouseScenarios(prisma: PrismaClient, productId: string, robotType: string) {
+  const names = [...WAREHOUSE_SCENARIOS, ...(SORTING_TYPES.includes(robotType) ? ['Сортировка грузов'] : [])];
+  for (const name of names) {
+    const scenario = await prisma.scenario.findFirst({ where: { name } });
+    if (!scenario) continue;
+    await prisma.productScenario.createMany({
+      data: [{ productId, scenarioId: scenario.id }],
+      skipDuplicates: true,
+    });
+  }
+  const industry = await prisma.industry.findFirst({ where: { name: 'Транспорт и логистика' } });
+  if (industry)
+    await prisma.productIndustry.createMany({
+      data: [{ productId, industryId: industry.id }],
+      skipDuplicates: true,
+    });
+}
+
 export async function seedRobotSpecs(prisma: PrismaClient) {
   const file = path.join(__dirname, 'data', 'robot-specs.json');
   if (!fs.existsSync(file)) {
@@ -149,7 +172,7 @@ export async function seedRobotSpecs(prisma: PrismaClient) {
         updated++;
         continue;
       }
-      await prisma.product.create({
+      const product = await prisma.product.create({
         data: {
           name: row.name,
           type: 'brs',
@@ -161,6 +184,8 @@ export async function seedRobotSpecs(prisma: PrismaClient) {
           ...data,
         },
       });
+      // Без сценария решение не попадёт в подбор: витрина берёт кандидатов по складским сценариям
+      await linkWarehouseScenarios(prisma, product.id, String(row.specs.robot_type));
       created++;
     }
   }

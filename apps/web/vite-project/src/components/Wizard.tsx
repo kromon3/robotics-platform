@@ -15,6 +15,8 @@ export type WizardField<TName extends string = string> = {
     unit?: string;
     hint?: string;
     span?: "full";
+    /** Подпись пустого значения в списке; по умолчанию «— Выберите —» */
+    emptyOption?: string;
 };
 
 export type WizardStep<TName extends string = string> = {
@@ -99,7 +101,7 @@ export function Wizard<TName extends string>({
     }, [gotoStepRef, steps]);
 
     const renderField = (field: WizardField<TName>) => {
-        const { name, label, type = "number", unit, hint, span } = field;
+        const { name, label, type = "number", unit, hint, span, emptyOption } = field;
         const value = getValue(name);
         const limit = type === "number" ? getLimit?.(name) : undefined;
         const outOfRange = limit && typeof value === "number" && (value < limit.min || value > limit.max);
@@ -133,7 +135,7 @@ export function Wizard<TName extends string>({
                 </span>
                 {type === "select" ? (
                     <select className={inputClass} name={name} value={String(value)} onChange={onChange}>
-                        <option value="">— Выберите —</option>
+                        <option value="">{emptyOption ?? "— Выберите —"}</option>
                         {getOptions?.(name).map((o) => (
                             <option key={o.value} value={o.value}>
                                 {o.label}

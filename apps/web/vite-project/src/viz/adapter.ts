@@ -8,6 +8,7 @@ import type { VizRobot } from "./robotSpecs";
 import { rackSize } from "./core/catalog";
 import { minAisle } from "./core/rules";
 import { rackModuleCapacity } from "./core/layout";
+import { rackById } from "./rackCatalog";
 import {
     DEFAULT_NORMS,
     SOURCE_LABEL,
@@ -87,11 +88,25 @@ export function toSiteInput(p: NumericFormData, e?: EconNumeric): SiteInput {
     };
 }
 
-/** Нормативы с учётом второй фазы: взносы, выработка, горизонт вводит пользователь. */
-export function toNorms(e?: EconNumeric, base: Norms = DEFAULT_NORMS): Norms {
+/**
+ * Нормативы с учётом второй фазы: взносы, выработка, горизонт вводит пользователь.
+ * p нужен для стеллажей: мест хранения столько, сколько задано в параметрах объекта.
+ */
+export function toNorms(e?: EconNumeric, base: Norms = DEFAULT_NORMS, p?: NumericFormData): Norms {
     if (!e || !e.workMode) return base;
+    const rack = e.rackSystemId ? rackById(e.rackSystemId) : undefined;
     return {
         ...base,
+        // Стеллажи считаем только если пользователь выбрал систему из каталога поставщиков
+        ...(rack
+            ? {
+                  rackPricePerPlace: rack.pricePerPlace ?? 0,
+                  rackPlaces: rack.pricePerPlace ? (p?.palletPlaces ?? 0) : 0,
+                  rackPricePerM2: rack.pricePerM2 ?? 0,
+                  rackAreaM2: rack.pricePerM2 ? e.activeAreaM2 : 0,
+                  rackLabel: `${rack.brand} ${rack.model}`,
+              }
+            : {}),
         payrollTax: e.payrollTaxPct ? 1 + e.payrollTaxPct / 100 : base.payrollTax,
         workerOutputPerHour: e.pickerLinesPerHour || base.workerOutputPerHour,
         horizonYears: e.horizonYears || base.horizonYears,
@@ -206,7 +221,17 @@ function buildResult(
     const isStat = robot.type === "ASRS";
     const aisle = isStat ? p.aisleWidth : Math.max(p.aisleWidth, minAisle(robot, cargo));
 
-    const rack = { type: p.rackType as string, ...rackSize(p.rackType, p.cargoType), capacityPerRack: p.shelfCapacity };
+    // Габариты секции и её вместимость — из выбранной системы каталога стеллажей,
+    // иначе типовые из RACK_SIZES. Так схема рисуется по реальным размерам поставщика.
+    const rackSys = econ?.rackSystemId ? rackById(econ.rackSystemId) : undefined;
+    const size = rackSize(p.rackType, p.cargoType);
+    const rack = {
+        type: p.rackType as string,
+        w: rackSys?.sizeM.w ?? size.w,
+        l: rackSys?.sizeM.l ?? size.l,
+        // Вместимость секции пользователь задаёт сам; из каталога берём её только если поле пустое
+        capacityPerRack: p.shelfCapacity || rackSys?.placesPerSection || 8,
+    };
     const storagePlaces = p.palletPlaces * (p.cargoType === "box" ? 6 : 1);
     const racks = isStat ? 0 : Math.max(1, Math.ceil(storagePlaces / rackModuleCapacity(rack, cargo.unit as CargoUnit)));
 
@@ -228,6 +253,12 @@ function buildResult(
     const assumptions = [
         ...assumptionsOf(e, norms, robot, extra),
         ...(aisle > p.aisleWidth ? [{ title: "Проход", text: `Ширина прохода увеличена с ${p.aisleWidth} до ${aisle} м: этого требует разворот ${robot.type} с грузом.` }] : []),
+        ...(rackSys
+            ? [{
+                  title: "Стеллажи",
+                  text: `Секция ${rackSys.brand} ${rackSys.model}: ${rack.w} × ${rack.l} м, ${rackSys.tiers ?? "—"} яруса, ${rack.capacityPerRack} мест, нагрузка на ярус ${rackSys.tierLoadKg ?? "—"} кг, доступ ${rackSys.access ?? "—"}. Источник: ${rackSys.sourceUrl ?? "прайс поставщика"}.`,
+              }]
+            : []),
         ...(fragment ? [{ title: "Схема", text: `На схеме показан фрагмент ${drawW} × ${drawL} м и ${drawUnits} из ${e.units} роботов (${drawRacks} из ${racks} стеллажей); имитация проверяет пропорциональную часть нагрузки. Экономика рассчитана на весь объект.` }] : []),
     ];
 
@@ -312,7 +343,7 @@ export function buildScenarios(
     econ?: EconNumeric,
     overrides?: Partial<Norms>,
 ) {
-    const norms: Norms = { ...toNorms(econ), ...overrides };
+    const norms: Norms = { ...toNorms(econ, DEFAULT_NORMS, p), ...overrides };
     return [
         buildBaseline(p, robot, norms, econ),
         buildResult(p, robot, "buy", norms, econ),

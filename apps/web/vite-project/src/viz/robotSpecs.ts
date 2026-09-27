@@ -15,6 +15,10 @@ export type VizRobot = {
     throughputPerHour: number; // заказов (перемещений) в час, паспортная
     price: number; // ₽
     specsSource: "specs" | "v0" | "type-default";
+    // Паспортные поля каталога v2 — только если производитель их заявил (иначе не проверяем)
+    liftHeightMm?: number; // высота подъёма груза
+    liftResidualKg?: number; // грузоподъёмность на максимальной высоте
+    gripper?: string; // тип захвата: «Вилы», «Подъёмный стол», …
 };
 
 // ТТХ v0 — ОЦЕНКИ по открытым источникам для роботов, которых нет в каталоге робототехников.
@@ -134,5 +138,13 @@ export function toVizRobot(p: Product): VizRobot {
         specsSource: hasSpecs ? "specs" : v0 ? "v0" : "type-default",
     };
     if (type === "FMR" || type === "CTU") robot.forkLen = fromSpecs.forkLen ?? v0?.forkLen ?? d.forkLen ?? robot.l * 0.8;
+
+    // Подъём: без этих значений правила высоты не применяются — не выдумываем то, чего производитель не заявил
+    const lift = num(s.lift_height_mm);
+    if (lift) robot.liftHeightMm = lift;
+    const residual = num(s.lift_residual_payload_kg);
+    if (residual) robot.liftResidualKg = residual;
+    if (typeof s.gripper === "string" && s.gripper) robot.gripper = s.gripper;
+
     return robot;
 }

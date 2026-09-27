@@ -37,6 +37,13 @@ export type Norms = {
     trainingPricePerPerson: number; // ₽/чел (в демо 300 000 / 3 = 100 000)
     floorArea: number; // подготовка пола: м² (500)
     floorPricePerM2: number; // ₽/м² (2 500)
+    // Стеллажное оборудование — прайсы поставщиков из листа «Стеллажи» (src/viz/rackCatalog.ts).
+    // Нули означают, что стеллажи в проект не входят: склад роботизируют на существующих.
+    rackPricePerPlace: number; // ₽ за место хранения
+    rackPlaces: number; // мест хранения
+    rackPricePerM2: number; // ₽/м² — для мезонинов, они продаются по площади
+    rackAreaM2: number; // площадь мезонина, м²
+    rackLabel: string; // бренд и модель — попадает в метод расчёта и в отчёт
     sparePartsShare: number; // ЗИП (2%)
     capexReserve: number; // резерв проекта (10%), §5.3
     // §6 — OPEX
@@ -71,6 +78,11 @@ export const DEFAULT_NORMS: Norms = {
     trainingPricePerPerson: 100_000,
     floorArea: 500,
     floorPricePerM2: 2_500,
+    rackPricePerPlace: 0,
+    rackPlaces: 0,
+    rackPricePerM2: 0,
+    rackAreaM2: 0,
+    rackLabel: "",
     sparePartsShare: 0.02,
     capexReserve: 0.1,
     serviceShare: 0.08,
@@ -155,6 +167,18 @@ export function laborSaving(s: SiteInput, r: RobotInput, n: Norms) {
 
 // ── §5 / §16.3. CAPEX покупки ───────────────────────────────────────────
 
+/** Стоимость стеллажей: по местам хранения либо по площади (мезонины) */
+export const rackCost = (n: Norms) => n.rackPricePerPlace * n.rackPlaces + n.rackPricePerM2 * n.rackAreaM2;
+
+function rackMethod(n: Norms): string {
+    const model = n.rackLabel ? ` — ${n.rackLabel}` : "";
+    if (n.rackPricePerPlace > 0 && n.rackPlaces > 0)
+        return `${fmt(n.rackPlaces)} мест × ${fmt(n.rackPricePerPlace)} ₽${model}`;
+    if (n.rackPricePerM2 > 0 && n.rackAreaM2 > 0)
+        return `${fmt(n.rackAreaM2)} м² × ${fmt(n.rackPricePerM2)} ₽/м²${model}`;
+    return "стеллажи в проект не входят: роботизация на существующем оборудовании";
+}
+
 export function capexItems(s: SiteInput, r: RobotInput, n: Norms): CostItem[] {
     const units = robotsRequired(s, r, n);
     const equipment = units * r.price;
@@ -170,6 +194,8 @@ export function capexItems(s: SiteInput, r: RobotInput, n: Norms): CostItem[] {
         { key: "commissioning", label: "Пусконаладка", value: base * n.commissioningShare, method: `${pct(n.commissioningShare)} ${baseLabel}`, source: "assumption" },
         { key: "training", label: "Обучение", value: n.trainingPeople * n.trainingPricePerPerson, method: `${n.trainingPeople} чел. × ${fmt(n.trainingPricePerPerson)} ₽`, source: "assumption" },
         { key: "floor", label: "Подготовка пола", value: n.floorArea * n.floorPricePerM2, method: `${fmt(n.floorArea)} м² × ${fmt(n.floorPricePerM2)} ₽/м²`, source: "assumption" },
+        // Единственная статья с ценой из прайса поставщика, а не из процентной ставки
+        { key: "racks", label: "Стеллажное оборудование", value: rackCost(n), method: rackMethod(n), source: "quote" },
         // ЗИП в §16.3 посчитан от роботов + зарядок независимо от остальных статей
         { key: "spare", label: "ЗИП", value: (equipment + chargers) * n.sparePartsShare, method: `${pct(n.sparePartsShare)} от роботов и зарядной инфраструктуры`, source: "assumption" },
     ];
