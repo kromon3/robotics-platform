@@ -54,7 +54,7 @@ const ROWS: Row[] = [
     { label: "Габариты (Д × Ш)", value: (i) => `${i.robot.l} × ${i.robot.w} м` },
     { label: "Грузоподъёмность", value: (i) => `${fmt(i.robot.payloadKg)} кг`, num: (i) => i.robot.payloadKg, best: "max" },
     { label: "Скорость", value: (i) => `${i.robot.speedMps} м/с`, num: (i) => i.robot.speedMps, best: "max" },
-    { label: "Производительность", value: (i) => `${i.robot.throughputPerHour} ед/ч`, num: (i) => i.robot.throughputPerHour, best: "max" },
+    { label: "Производительность", value: (i) => `${i.robot.throughputPerHour} ед/ч (${i.robot.throughputSource === "specs" ? "паспортная" : "типовая для класса"})`, num: (i) => i.robot.throughputPerHour, best: "max" },
     { label: "Высота подъёма", value: (i) => mm(i.robot.liftHeightMm ?? null), num: (i) => i.robot.liftHeightMm ?? null, best: "max" },
     { label: "Грузоподъёмность на высоте", value: (i) => (i.robot.liftResidualKg ? `${fmt(i.robot.liftResidualKg)} кг` : null), num: (i) => i.robot.liftResidualKg ?? null, best: "max" },
     { label: "Точность позиционирования", value: (i) => (spec(i.product, "positioning_mm") ? `± ${spec(i.product, "positioning_mm")} мм` : null), num: (i) => spec(i.product, "positioning_mm"), best: "min" },
@@ -67,6 +67,7 @@ const ROWS: Row[] = [
     { label: "Производитель", value: (i) => i.product.company?.name ?? text(i.product, "manufacturer") },
     { label: "Статус", value: (i) => text(i.product, "availability") ?? (i.product.status === "operation" ? "В эксплуатации" : null) },
     { label: "Источник ТТХ", value: (i) => `${SOURCE_LABEL[i.robot.specsSource]}${i.product.verified ? ", подтверждён производителем" : ""}` },
+    { label: "Оговорка к цене и ТТХ", value: (i) => i.robot.note ?? null },
 ];
 
 const th = "sticky left-0 z-10 bg-slate-50 px-3 py-2 text-left text-xs font-medium text-slate-500 dark:bg-slate-950 dark:text-slate-400";

@@ -21,6 +21,10 @@ export type ReportMeta = {
     catalogVersion: number | string;
     modelVersion: string;
     specsSource: string;
+    /** Заявлена ли производительность производителем или взята типовая для класса */
+    throughputSource?: "specs" | "type-default";
+    /** Оговорка поставщика данных к цене и ТТХ решения */
+    note?: string;
 };
 
 type Cell = string | number | null;
@@ -103,6 +107,13 @@ export function buildReportWorkbook(site: SiteInput, robot: RobotInput, norms: N
             ["Версия каталога", meta.catalogVersion],
             ["Версия модели", meta.modelVersion],
             ["Источник ТТХ робота", meta.specsSource],
+            [
+                "Производительность решения",
+                meta.throughputSource === "specs"
+                    ? "заявлена производителем"
+                    : "типовое значение для класса (производитель не заявил)",
+            ],
+            ...(meta.note ? [["Оговорка к цене и ТТХ", meta.note] as Cell[]] : []),
             [],
             ["Пиковая потребность, ед/ч", +buy.peakDemand.toFixed(1)],
             ["Эффективная производительность робота, ед/ч", +buy.effective.toFixed(1)],
@@ -162,7 +173,11 @@ export function buildReportWorkbook(site: SiteInput, robot: RobotInput, norms: N
             ["Бюджет роботизации", site.budget, "₽"],
             [],
             ["Цена решения", robot.price, "₽"],
-            ["Паспортная производительность", robot.throughputPerHour, "ед/ч"],
+            [
+                meta.throughputSource === "specs" ? "Производительность (паспорт)" : "Производительность (типовая для класса)",
+                robot.throughputPerHour,
+                "ед/ч",
+            ],
         ],
     };
 

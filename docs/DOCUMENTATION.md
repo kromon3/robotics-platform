@@ -201,7 +201,7 @@ docker compose up --build
 | Данные | Файл | Происхождение |
 |---|---|---|
 | Каталог решений | `apps/api/prisma/data/catalog_export_v4.json` | датасет организатора, версия 4 |
-| ТТХ роботов | `apps/api/prisma/data/robots-sheet-v2.csv` → `robot-specs.json` | каталог робототехников команды по открытым источникам производителей |
+| ТТХ роботов | `apps/api/prisma/data/robots-sheet.csv` → `robot-specs.json` | каталог робототехников команды по открытым источникам производителей |
 | Фотографии | `apps/api/prisma/data/photos/` | там же |
 | Стеллажные системы | `apps/api/prisma/data/racks-sheet.csv` → `src/viz/rackCatalog.ts` | прайсы поставщиков, ссылка у каждой позиции |
 | Нормативы экономики | `src/viz/economics.ts` (`DEFAULT_NORMS`) | документ экономистов команды v2 |

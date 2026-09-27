@@ -10,7 +10,8 @@ const SITE: SiteInput = {
 
 const robot = (over: Partial<VizRobot>): VizRobot => ({
     id: "r", name: "Робот", type: "AMR", w: 1, l: 1.2, speedMps: 1.5,
-    payloadKg: 1500, throughputPerHour: 90, price: 3_000_000, specsSource: "specs", ...over,
+    payloadKg: 1500, throughputPerHour: 90, price: 3_000_000, specsSource: "specs",
+    throughputSource: "type-default", ...over,
 });
 
 const offer = (id: string, over: Partial<RankInput> = {}, robotOver: Partial<VizRobot> = {}): RankInput => ({

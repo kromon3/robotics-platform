@@ -19,13 +19,17 @@ export type VizRobot = {
     liftHeightMm?: number; // высота подъёма груза
     liftResidualKg?: number; // грузоподъёмность на максимальной высоте
     gripper?: string; // тип захвата: «Вилы», «Подъёмный стол», …
+    /** Откуда производительность: заявлена производителем или типовая для класса */
+    throughputSource: "specs" | "type-default";
+    /** Оговорка поставщика данных к цене или ТТХ */
+    note?: string;
 };
 
 // ТТХ v0 — ОЦЕНКИ по открытым источникам для роботов, которых нет в каталоге робототехников.
 // Производительности здесь нет намеренно: она берётся из TYPE_DEFAULTS по документу экономистов.
 // Ключ — id продукта в каталоге организатора. Когда в product.specs появятся реальные
 // значения (payload_kg, length_mm, width_mm, speed_m_s, throughput_units_per_h), они перекроют эти.
-const V0: Record<string, Partial<Omit<VizRobot, "id" | "name" | "price" | "specsSource">>> = {
+const V0: Record<string, Partial<Omit<VizRobot, "id" | "name" | "price" | "specsSource" | "throughputSource">>> = {
     // Ronavi Robotics
     "5760e938-9a43-45a7-b8e8-f4f2e6383930": { type: "AMR", w: 1.0, l: 1.5, speedMps: 1.5, payloadKg: 1500 }, // H1500
     "6f3da854-41da-4363-8496-5487f37c845a": { type: "AMR", w: 1.05, l: 1.6, speedMps: 1.5, payloadKg: 2000 }, // H2000
@@ -64,7 +68,7 @@ const V0: Record<string, Partial<Omit<VizRobot, "id" | "name" | "price" | "specs
 // решений, поэтому берётся из документа экономистов (§2): для AMR указан диапазон 80–100 паллет/ч,
 // модельное значение 90. Остальные типы — пропорционально характеру операции.
 // Это модельное допущение: как только робототехники заполнят колонку, значение придёт из specs.
-const TYPE_DEFAULTS: Record<VizRobotType, Omit<VizRobot, "id" | "name" | "price" | "specsSource" | "type">> = {
+const TYPE_DEFAULTS: Record<VizRobotType, Omit<VizRobot, "id" | "name" | "price" | "specsSource" | "throughputSource" | "type">> = {
     AMR: { w: 0.8, l: 1.2, speedMps: 1.5, payloadKg: 500, throughputPerHour: 90 },
     UGV: { w: 1.0, l: 1.6, speedMps: 1.2, payloadKg: 500, throughputPerHour: 40 },
     AGV: { w: 1.1, l: 2.1, speedMps: 1.0, payloadKg: 1000, throughputPerHour: 35 },
@@ -120,7 +124,7 @@ export function toVizRobot(p: Product): VizRobot {
         forkLen: num(s.fork_length_mm) ? num(s.fork_length_mm)! / 1000 : null,
         speedMps: num(s.speed_mps) ?? num(s.speed_m_s),
         payloadKg: num(s.payload_kg),
-        // В каталоге ТТХ колонка пустая у всех — производительность берётся из дефолтов по типу
+        // Производительность заявлена не всеми производителями; где не заявлена — дефолт по типу
         throughputPerHour: num(s.throughput_per_hour) ?? num(s.throughput_units_per_h),
     };
     const hasSpecs = Object.values(fromSpecs).some((v) => v !== null);
@@ -136,6 +140,7 @@ export function toVizRobot(p: Product): VizRobot {
         throughputPerHour: fromSpecs.throughputPerHour ?? v0?.throughputPerHour ?? d.throughputPerHour,
         price: p.price ? Number(p.price) : 0,
         specsSource: hasSpecs ? "specs" : v0 ? "v0" : "type-default",
+        throughputSource: fromSpecs.throughputPerHour ? "specs" : "type-default",
     };
     if (type === "FMR" || type === "CTU") robot.forkLen = fromSpecs.forkLen ?? v0?.forkLen ?? d.forkLen ?? robot.l * 0.8;
 
@@ -145,6 +150,8 @@ export function toVizRobot(p: Product): VizRobot {
     const residual = num(s.lift_residual_payload_kg);
     if (residual) robot.liftResidualKg = residual;
     if (typeof s.gripper === "string" && s.gripper) robot.gripper = s.gripper;
+    // Примечание поставщика данных: чаще всего оговорка к цене («оценка landed РФ»)
+    if (typeof s.note === "string" && s.note.trim()) robot.note = s.note.trim();
 
     return robot;
 }

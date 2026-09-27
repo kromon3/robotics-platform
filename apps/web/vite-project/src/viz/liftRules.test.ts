@@ -14,6 +14,7 @@ const robot = (over: Partial<VizRobot>): VizRobot => ({
     throughputPerHour: 20,
     price: 1_000_000,
     specsSource: "specs",
+    throughputSource: "type-default",
     ...over,
 });
 

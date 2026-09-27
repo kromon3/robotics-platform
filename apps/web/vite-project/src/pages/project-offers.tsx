@@ -255,10 +255,17 @@ export function ProjectOffers() {
                                                 <span>{robot.type}</span>
                                                 <span>{robot.w} × {robot.l} м</span>
                                                 <span>до {robot.payloadKg.toLocaleString("ru-RU")} кг</span>
-                                                <span>{robot.throughputPerHour} ед/ч</span>
+                                                <span title={robot.throughputSource === "specs" ? "заявлена производителем" : "типовое значение для класса"}>
+                                                    {robot.throughputPerHour} ед/ч{robot.throughputSource === "specs" ? "" : " ≈"}
+                                                </span>
                                                 <span className="col-span-2">{aisle > 0 ? `проход ≥ ${aisle} м` : " "}</span>
                                             </div>
                                             <div className="mt-1 truncate text-[11px] text-slate-400 dark:text-slate-500">{SOURCE_LABEL[robot.specsSource]}</div>
+                                            {robot.note && (
+                                                <p className="mt-1 text-[11px] leading-snug text-amber-700 dark:text-amber-400" title={robot.note}>
+                                                    ⚠ {robot.note.length > 90 ? robot.note.slice(0, 90) + "…" : robot.note}
+                                                </p>
+                                            )}
                                             <ScoreBreakdown parts={parts} />
                                             <label className="mt-2 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
                                                 <input

@@ -1,4 +1,4 @@
-// Слияние листа «Каталог» от робототехников (v2, robots-sheet-v2.csv) с robot-specs.json.
+// Слияние листа «Каталог» от робототехников (robots-sheet.csv) с robot-specs.json.
 //
 // Матчим ПО НАЗВАНИЮ, а не по id: в v2 карточки перенумерованы (в v1 R-123 = «Сёмабот»,
 // в v2 R-123 = «DMR Carrier P»), а наши фото лежат как <catalogId>.<ext> и колонка «Фото»
@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 
 const DATA = path.join(__dirname, '..', 'data');
-const SHEET = path.join(DATA, 'robots-sheet-v2.csv');
+const SHEET = path.join(DATA, 'robots-sheet.csv');
 const SPECS = path.join(DATA, 'robot-specs.json');
 
 // Кириллические омоглифы -> латиница: «АК-2000» и «AK-2000» должны совпасть (как в seed-specs.ts)
@@ -86,6 +86,9 @@ function toSpecs(r) {
     country: str(r.country),
     availability: str(r.availability),
     sheet_id: str(r.id), // id карточки в листе — чтобы найти строку у робототехников
+    // Примечание поставщика данных: как правило, оговорка к цене («FOB $15–17 тыс.,
+    // в каталоге оценка landed РФ») — показываем пользователю рядом с ценой
+    note: str(r.note),
   };
   for (const k of Object.keys(s)) if (s[k] === undefined) delete s[k];
   return s;
@@ -99,7 +102,26 @@ const byName = new Map(specs.map((r) => [key(r.name), r]));
 const maxId = Math.max(...specs.map((r) => Number(String(r.catalogId).replace(/\D/g, '')) || 0));
 let nextId = maxId + 1;
 
-const log = { updated: [], added: [], untouched: [], fieldsAdded: {} };
+const log = { updated: [], added: [], untouched: [], fieldsAdded: {}, photos: [] };
+
+// Фотографии из архива поставщика данных названы по ЕГО id карточки (R-213.jpg),
+// а у нас свои — поэтому файл копируется под нашим именем. Уже имеющиеся фото не трогаем:
+// они подобраны раньше и частью переведены в webp.
+const PHOTOS_DIR = (() => {
+  const i = process.argv.indexOf('--photos');
+  return i > 0 ? process.argv[i + 1] : null;
+})();
+const PHOTOS_OUT = path.join(DATA, 'photos');
+
+function takePhoto(row, catalogId, hasPhoto) {
+  if (!PHOTOS_DIR || hasPhoto || !row.photo) return null;
+  const src = path.join(PHOTOS_DIR, row.photo);
+  if (!fs.existsSync(src)) return null;
+  const name = catalogId + path.extname(row.photo).toLowerCase();
+  fs.copyFileSync(src, path.join(PHOTOS_OUT, name));
+  log.photos.push(`${row.photo} -> ${name}`);
+  return name;
+}
 
 for (const row of sheet) {
   const fresh = toSpecs(row);
@@ -114,6 +136,7 @@ for (const row of sheet) {
     existing.sourceUrl = str(row.source_url) ?? existing.sourceUrl;
     existing.sourceDate = str(row.data_date) ?? existing.sourceDate;
     existing.verified = row.verified === 'Да';
+    existing.photo = existing.photo ?? takePhoto(row, existing.catalogId, Boolean(existing.photo));
     const added = Object.keys(fresh).filter((k) => !before.includes(k));
     added.forEach((k) => (log.fieldsAdded[k] = (log.fieldsAdded[k] ?? 0) + 1));
     log.updated.push(`${existing.catalogId} ${existing.name}${added.length ? ' (+' + added.length + ' полей)' : ''}`);
@@ -124,7 +147,7 @@ for (const row of sheet) {
       name: row.name,
       manufacturer: str(row.manufacturer) ?? null,
       priceRub: num(row.price_rub) ?? null,
-      photo: null, // в листе колонка «Фото» не заполнена
+      photo: takePhoto(row, catalogId, false),
       sourceUrl: str(row.source_url) ?? null,
       sourceDate: str(row.data_date) ?? null,
       verified: row.verified === 'Да',
@@ -143,7 +166,8 @@ log.added.forEach((s) => console.log('  ' + s));
 console.log(`\nНе тронуто (нет в листе v2): ${log.untouched.length}`);
 console.log(`\nНовые поля ТТХ:`);
 Object.entries(log.fieldsAdded).sort((a, b) => b[1] - a[1]).forEach(([k, n]) => console.log(`  ${k.padEnd(28)} ${n}`));
-console.log(`\nИтого карточек: ${specs.length}`);
+console.log(`\nСкопировано фотографий: ${log.photos.length}`);
+console.log(`\nИтого карточек: ${specs.length}, с фото: ${specs.filter((r) => r.photo).length}`);
 
 if (process.argv.includes('--write')) {
   fs.writeFileSync(SPECS, JSON.stringify(specs, null, 2) + '\n', 'utf8');

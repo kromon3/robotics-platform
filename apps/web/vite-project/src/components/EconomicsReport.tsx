@@ -123,8 +123,10 @@ export function EconomicsReport({ site, robot, norms, meta }: Props) {
                         {new Date().toLocaleString("ru-RU")}
                     </div>
                     <div className="text-xs text-slate-600">
-                        Каталог v{meta.catalogVersion} · {meta.modelVersion} · ТТХ: {meta.specsSource}
+                        Каталог v{meta.catalogVersion} · {meta.modelVersion} · ТТХ: {meta.specsSource} · производительность{" "}
+                        {meta.throughputSource === "specs" ? "заявлена производителем" : "типовая для класса"}
                     </div>
+                    {meta.note && <div className="mt-1 text-xs text-slate-600">Оговорка поставщика данных: {meta.note}</div>}
                 </header>
             )}
 

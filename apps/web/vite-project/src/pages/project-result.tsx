@@ -77,13 +77,16 @@ export function ProjectResult() {
     // Шапка выгружаемого отчёта: что считали, чем и на каких данных (ТЗ 3.1.5, 3.7.3)
     const reportMeta = useMemo<ReportMeta | undefined>(() => {
         if (!product) return undefined;
+        const viz = toVizRobot(product);
         return {
             projectName: `Экспресс-оценка роботизации — ${product.name}`,
             robotName: `${product.name}${product.company?.name ? `, ${product.company.name}` : ""}`,
             objectType: "Склад",
             catalogVersion: product.catalogVersion,
             modelVersion: MODEL_VERSION,
-            specsSource: SPECS_SOURCE_LABEL[toVizRobot(product).specsSource],
+            specsSource: SPECS_SOURCE_LABEL[viz.specsSource],
+            throughputSource: viz.throughputSource,
+            note: viz.note,
         };
     }, [product]);
 
