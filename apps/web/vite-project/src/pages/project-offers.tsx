@@ -8,6 +8,12 @@ import { toVizRobot, type VizRobot } from "../viz/robotSpecs";
 import { checkCompat, minAisle } from "../viz/core/rules";
 import { checkLift } from "../viz/liftRules";
 import { m, rackTier } from "../viz/rackSpecs";
+import { CompareTable } from "../components/CompareTable.tsx";
+import { DEFAULT_NORMS } from "../viz/economics";
+import { toSiteInput } from "../viz/adapter";
+
+// Сколько решений можно сравнивать одновременно: больше трёх колонок таблица не держит на ноутбуке
+const COMPARE_LIMIT = 3;
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -42,6 +48,7 @@ export function ProjectOffers() {
     const [items, setItems] = useState<Product[] | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [showExcluded, setShowExcluded] = useState(false);
+    const [compareIds, setCompareIds] = useState<string[]>([]);
 
     const ready = getMissingFields(formData).length === 0 && getInvalidFields(formData).length === 0;
 
@@ -111,6 +118,15 @@ export function ProjectOffers() {
         navigate("/projects/economics");
     };
 
+    const toggleCompare = (id: string) =>
+        setCompareIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : prev.length >= COMPARE_LIMIT ? prev : [...prev, id],
+        );
+
+    const compareItems = compareIds
+        .map((id) => fit.find((o) => o.product.id === id))
+        .filter((o): o is Offer => Boolean(o));
+
     return (
         <div className="flex flex-col gap-6">
             <div>
@@ -144,6 +160,17 @@ export function ProjectOffers() {
                 </div>
             )}
 
+            {compareItems.length > 1 && (
+                <CompareTable
+                    items={compareItems}
+                    site={toSiteInput(p)}
+                    norms={DEFAULT_NORMS}
+                    onRemove={toggleCompare}
+                    onClear={() => setCompareIds([])}
+                    onChoose={choose}
+                />
+            )}
+
             {items && (
                 <>
                     <section>
@@ -170,6 +197,16 @@ export function ProjectOffers() {
                                                 <span className="col-span-2">{aisle > 0 ? `проход ≥ ${aisle} м` : " "}</span>
                                             </div>
                                             <div className="mt-1 truncate text-[11px] text-slate-400 dark:text-slate-500">{SOURCE_LABEL[robot.specsSource]}</div>
+                                            <label className="mt-2 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={compareIds.includes(product.id)}
+                                                    onChange={() => toggleCompare(product.id)}
+                                                    disabled={!compareIds.includes(product.id) && compareIds.length >= COMPARE_LIMIT}
+                                                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-400 disabled:opacity-40 dark:border-slate-700"
+                                                />
+                                                Сравнить
+                                            </label>
                                             <button
                                                 type="button"
                                                 onClick={() => choose(product.id)}
