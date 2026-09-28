@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { join } from 'path';
+import { ADMIN_ROOT, setupAdmin } from './admin/admin';
 async function bootstrap() {
   // REST API
   const port = process.env.PORT ?? 3000;
@@ -33,8 +34,13 @@ async function bootstrap() {
     }),
   );
   appRest.enableCors();
+
+  // AdminJS монтируется до listen: свой роутер, своя сессия, ValidationPipe его не трогает
+  await setupAdmin(appRest);
+
   await appRest.listen(process.env.PORT ?? 3000);
   console.log(`🚀 Server is running on http://localhost:${port}`);
   console.log(`📚 Swagger docs: http://localhost:${port}/docs`);
+  console.log(`🛠️  Admin panel: http://localhost:${port}${ADMIN_ROOT}`);
 }
 bootstrap();

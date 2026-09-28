@@ -24,6 +24,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-robotics}:${POSTGRES_PASSWORD:-robotics}@db:5432/${POSTGRES_DB:-robotics}?schema=public
       JWT_SECRET: ${JWT_SECRET:-change-me-in-.env}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      ADMIN_COOKIE_SECRET: ${ADMIN_COOKIE_SECRET:-change-me-in-.env}
       PORT: 3000
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@robotics.local}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin12345}
