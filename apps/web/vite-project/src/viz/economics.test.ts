@@ -12,6 +12,7 @@ import {
     peakDemandPerHour,
     robotsRequired,
     roiZone,
+    verdict,
     workersPerRobot,
     type Norms,
     type RobotInput,
@@ -161,5 +162,49 @@ describe("§11. Зоны интерпретации", () => {
         [1.5, "red"],
     ])("CAPEX/бюджет %s — %s", (share, zone) => {
         expect(budgetZone(share as number)).toBe(zone);
+    });
+});
+
+describe("§12. Заключение по сценариям", () => {
+    const base = computeScenario("baseline", SITE, ROBOT, NORMS);
+    const buy = computeScenario("buy", SITE, ROBOT, NORMS);
+    const raas = computeScenario("raas", SITE, ROBOT, NORMS);
+
+    it("на контрольном примере рекомендует сценарий с меньшим TCO", () => {
+        const v = verdict(base, buy, raas, NORMS);
+        const cheaper = buy.tco <= raas.tco ? "buy" : "raas";
+        expect(v.winner).toBe(cheaper);
+        expect(v.reasons.length).toBeGreaterThan(0);
+        // Разрыв TCO считается как «RaaS минус покупка»: плюс — покупка дешевле
+        expect(v.tcoGap).toBeCloseTo(raas.tco - buy.tco, 6);
+    });
+
+    it("не рекомендует роботизацию, когда она дороже, чем ничего не делать", () => {
+        // Один оператор: замещать почти нечего, а парк роботов нужен тот же
+        const tinySite: SiteInput = { ...SITE, staffCount: 1 };
+        const b = computeScenario("baseline", tinySite, ROBOT, NORMS);
+        const bu = computeScenario("buy", tinySite, ROBOT, NORMS);
+        const ra = computeScenario("raas", tinySite, ROBOT, NORMS);
+
+        const v = verdict(b, bu, ra, NORMS);
+        expect(v.winner).toBe("none");
+        expect(v.headline).toMatch(/не окупается/);
+    });
+
+    it("предупреждает, когда CAPEX не помещается в бюджет", () => {
+        const poorSite: SiteInput = { ...SITE, budget: 1_000_000 };
+        const b = computeScenario("baseline", poorSite, ROBOT, NORMS);
+        const bu = computeScenario("buy", poorSite, ROBOT, NORMS);
+        const ra = computeScenario("raas", poorSite, ROBOT, NORMS);
+
+        const v = verdict(b, bu, ra, NORMS);
+        if (v.winner === "buy") {
+            expect(v.caveats.some((c) => /бюджет/i.test(c))).toBe(true);
+        }
+    });
+
+    it("всегда добавляет оговорку об ограничениях модели", () => {
+        const v = verdict(base, buy, raas, NORMS);
+        expect(v.caveats.some((c) => /дисконтирован/i.test(c))).toBe(true);
     });
 });

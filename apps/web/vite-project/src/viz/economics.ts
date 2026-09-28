@@ -315,3 +315,99 @@ export const ZONE_LABEL: Record<Zone, string> = {
     yellow: "требует проверки",
     red: "вне приемлемых границ",
 };
+
+// ── §12. Заключение: какой сценарий выгоднее и почему (ТЗ 3.7.1) ─────────
+
+export type VerdictKind = "buy" | "raas" | "none";
+
+export type Verdict = {
+    winner: VerdictKind;
+    /** Короткий заголовок: что рекомендуем */
+    headline: string;
+    /** Почему — по TCO, окупаемости и бюджету */
+    reasons: string[];
+    /** Что проверить перед решением */
+    caveats: string[];
+    /** Разница TCO между покупкой и RaaS, ₽ (положительная — покупка дешевле) */
+    tcoGap: number;
+};
+
+const money = (v: number) => `${Math.round(v).toLocaleString("ru-RU")} ₽`;
+const mln = (v: number) => `${(v / 1e6).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млн ₽`;
+
+/**
+ * Сравнивает три сценария на горизонте norms.horizonYears и объясняет выбор.
+ * Решающий критерий — TCO: он учитывает и разовые затраты, и ежегодные.
+ */
+export function verdict(
+    baseline: ScenarioEconomics,
+    buy: ScenarioEconomics,
+    raas: ScenarioEconomics,
+    norms: Norms,
+): Verdict {
+    const years = norms.horizonYears;
+    const tcoGap = raas.tco - buy.tco;
+    const reasons: string[] = [];
+    const caveats: string[] = [];
+
+    // Роботизация оправдана, только если хоть один сценарий дешевле, чем ничего не делать
+    const bestRobotTco = Math.min(buy.tco, raas.tco);
+    if (bestRobotTco >= baseline.tco) {
+        return {
+            winner: "none",
+            headline: "Роботизация на этих параметрах не окупается",
+            reasons: [
+                `TCO без роботизации за ${years} лет — ${mln(baseline.tco)}, лучший сценарий с роботами — ${mln(bestRobotTco)}`,
+                buy.annualEffect <= 0
+                    ? "Годовой эффект отрицательный: эксплуатация роботов дороже замещаемого ФОТ"
+                    : `Годового эффекта ${mln(buy.annualEffect)} не хватает, чтобы вернуть ${mln(buy.capex)} за ${years} лет`,
+            ],
+            caveats: [
+                "Проверьте объём операций и численность замещаемого персонала — на них опирается весь расчёт",
+                "Модель не учитывает косвенные эффекты: рост пропускной способности, снижение ошибок, высвобождение площадей",
+            ],
+            tcoGap,
+        };
+    }
+
+    const winner: VerdictKind = tcoGap > 0 ? "buy" : "raas";
+    const win = winner === "buy" ? buy : raas;
+    const lose = winner === "buy" ? raas : buy;
+
+    reasons.push(
+        `TCO за ${years} лет: ${mln(win.tco)} против ${mln(lose.tco)} — разница ${mln(Math.abs(tcoGap))}`,
+    );
+    reasons.push(
+        `Обойдётся дешевле, чем без роботизации: ${mln(baseline.tco)} → ${mln(win.tco)}, экономия ${mln(baseline.tco - win.tco)}`,
+    );
+
+    if (winner === "buy") {
+        const zone = paybackZone(buy.paybackYears);
+        if (buy.paybackYears !== null) {
+            reasons.push(
+                `Разовые затраты ${mln(buy.capex)} возвращаются за ${buy.paybackYears} г. — ${zone ? ZONE_LABEL[zone] : "—"}`,
+            );
+        }
+        if (buy.budgetShare !== null && buy.budgetShare > 1) {
+            caveats.push(
+                `CAPEX превышает заявленный бюджет на ${Math.round((buy.budgetShare - 1) * 100)}% — нужен лизинг, транш или RaaS`,
+            );
+        }
+    } else {
+        reasons.push(
+            `RaaS не требует разовых вложений: ${money(raas.capex)} на старте против ${mln(buy.capex)} при покупке`,
+        );
+        caveats.push("Роботы остаются у поставщика — после горизонта расчёта платежи продолжаются");
+    }
+
+    caveats.push(
+        "Оценка предварительная: не учтены налоговые эффекты, дисконтирование, инфляция и остаточная стоимость оборудования",
+    );
+
+    const headline =
+        winner === "buy"
+            ? `Выгоднее покупка роботов: ${win.units} шт., окупаемость ${buy.paybackYears ?? "—"} г.`
+            : `Выгоднее RaaS: ${win.units} шт. по подписке, без разовых вложений`;
+
+    return { winner, headline, reasons, caveats, tcoGap };
+}

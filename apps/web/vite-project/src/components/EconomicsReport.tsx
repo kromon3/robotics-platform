@@ -1,4 +1,4 @@
-﻿import { useMemo } from "react";
+﻿import { useMemo, useState } from "react";
 import {
     Bar,
     BarChart,
@@ -15,6 +15,7 @@ import {
     computeScenario,
     paybackZone,
     roiZone,
+    verdict,
     type Norms,
     type RobotInput,
     type SiteInput,
@@ -50,7 +51,42 @@ type Props = { site: SiteInput; robot: RobotInput; norms: Norms; meta?: ReportMe
  * Блоки `hidden print:block` попадают только в PDF (ТЗ 3.7.3): титул, исходные данные,
  * нормативы, источники и ограничения — чтобы выгруженный отчёт читался без приложения.
  */
-export function EconomicsReport({ site, robot, norms, meta }: Props) {
+export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseNorms, meta }: Props) {
+    // What-if (ТЗ 3.5.3): три параметра, от которых сильнее всего зависит вывод.
+    // Считаем в браузере теми же формулами, поэтому пересчёт мгновенный.
+    const [salary, setSalary] = useState(baseSite.staffSalaryMonth);
+    const [utilization, setUtilization] = useState(baseNorms.utilization);
+    const [price, setPrice] = useState(baseRobot.price);
+
+    // Сброс при смене исходных данных (другой робот, другой расчёт).
+    // Через setState в рендере, а не useEffect: React перезапускает рендер сразу, без лишнего кадра.
+    const [syncKey, setSyncKey] = useState(`${baseSite.staffSalaryMonth}|${baseNorms.utilization}|${baseRobot.price}`);
+    const nextKey = `${baseSite.staffSalaryMonth}|${baseNorms.utilization}|${baseRobot.price}`;
+    if (nextKey !== syncKey) {
+        setSyncKey(nextKey);
+        setSalary(baseSite.staffSalaryMonth);
+        setUtilization(baseNorms.utilization);
+        setPrice(baseRobot.price);
+    }
+
+    const site = useMemo<SiteInput>(() => ({ ...baseSite, staffSalaryMonth: salary }), [baseSite, salary]);
+    const robot = useMemo<RobotInput>(() => ({ ...baseRobot, price }), [baseRobot, price]);
+    const norms = useMemo<Norms>(() => ({ ...baseNorms, utilization }), [baseNorms, utilization]);
+
+    const whatIfChanges = [
+        salary !== baseSite.staffSalaryMonth ? `зарплата ${money(baseSite.staffSalaryMonth)} → ${money(salary)}` : null,
+        utilization !== baseNorms.utilization
+            ? `загрузка ${Math.round(baseNorms.utilization * 100)}% → ${Math.round(utilization * 100)}%`
+            : null,
+        price !== baseRobot.price ? `цена робота ${money(baseRobot.price)} → ${money(price)}` : null,
+    ].filter(Boolean) as string[];
+
+    const resetWhatIf = () => {
+        setSalary(baseSite.staffSalaryMonth);
+        setUtilization(baseNorms.utilization);
+        setPrice(baseRobot.price);
+    };
+
     const buy = useMemo(() => computeScenario("buy", site, robot, norms), [site, robot, norms]);
     const raas = useMemo(() => computeScenario("raas", site, robot, norms), [site, robot, norms]);
     const base = useMemo(() => computeScenario("baseline", site, robot, norms), [site, robot, norms]);
@@ -106,6 +142,9 @@ export function EconomicsReport({ site, robot, norms, meta }: Props) {
         raas: Math.round(-raas.capex + raas.annualEffect * y),
     }));
 
+    // Итоговый вывод по трём сценариям — считаем там же, где и сами сценарии
+    const conclusion = useMemo(() => verdict(base, buy, raas, norms), [base, buy, raas, norms]);
+
     const capexData = buy.capexItems.filter((i) => i.value > 0).map((i) => ({ name: i.label, value: Math.round(i.value), method: i.method, source: i.source }));
     const opexData = buy.opexItems.filter((i) => i.value > 0).map((i) => ({ name: i.label, value: Math.round(i.value), method: i.method, source: i.source }));
 
@@ -128,6 +167,62 @@ export function EconomicsReport({ site, robot, norms, meta }: Props) {
                     </div>
                     {meta.note && <div className="mt-1 text-xs text-slate-600">Оговорка поставщика данных: {meta.note}</div>}
                 </header>
+            )}
+
+            {/* What-if: пересчёт на лету, в печать не попадает — вместо него строка об изменениях */}
+            <section className={`${card} print:hidden`}>
+                <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        Что если…
+                    </h3>
+                    {whatIfChanges.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={resetWhatIf}
+                            className="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+                        >
+                            Вернуть исходные
+                        </button>
+                    )}
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                    <Slider
+                        label="Зарплата оператора"
+                        value={salary}
+                        min={Math.round(baseSite.staffSalaryMonth * 0.5)}
+                        max={Math.round(baseSite.staffSalaryMonth * 2)}
+                        step={5000}
+                        format={(v) => `${money(v)} / мес`}
+                        onChange={setSalary}
+                    />
+                    <Slider
+                        label="Коэффициент загрузки робота"
+                        value={utilization}
+                        min={0.3}
+                        max={1}
+                        step={0.05}
+                        format={(v) => `${Math.round(v * 100)}%`}
+                        onChange={setUtilization}
+                    />
+                    <Slider
+                        label="Цена решения"
+                        value={price}
+                        min={Math.round(baseRobot.price * 0.5)}
+                        max={Math.round(baseRobot.price * 2)}
+                        step={Math.max(50_000, Math.round(baseRobot.price * 0.01))}
+                        format={money}
+                        onChange={setPrice}
+                    />
+                </div>
+                <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+                    Пересчитываются все показатели ниже, включая заключение и схему затрат. На сохранённый расчёт не влияет.
+                </p>
+            </section>
+
+            {whatIfChanges.length > 0 && (
+                <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+                    Показатели пересчитаны для изменённых параметров: {whatIfChanges.join(" · ")}
+                </p>
             )}
 
             {/* Ключевые показатели с зонами */}
@@ -169,6 +264,34 @@ export function EconomicsReport({ site, robot, norms, meta }: Props) {
                             ))}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Заключение под таблицей (ТЗ 3.7.1): что выбрать и почему */}
+                <div
+                    className={`mt-5 rounded-xl border p-4 ${
+                        conclusion.winner === "none"
+                            ? ZONE_STYLE.red
+                            : "border-indigo-200 bg-indigo-50 text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-100"
+                    }`}
+                >
+                    <div className="text-xs font-semibold uppercase tracking-wide opacity-70">Заключение</div>
+                    <p className="mt-1 text-base font-semibold">{conclusion.headline}</p>
+                    <ul className="mt-2 space-y-1 text-sm">
+                        {conclusion.reasons.map((reason) => (
+                            <li key={reason} className="flex gap-2">
+                                <span aria-hidden>•</span>
+                                <span>{reason}</span>
+                            </li>
+                        ))}
+                    </ul>
+                    <ul className="mt-3 space-y-1 border-t border-current/20 pt-2 text-xs opacity-80">
+                        {conclusion.caveats.map((caveat) => (
+                            <li key={caveat} className="flex gap-2">
+                                <span aria-hidden>!</span>
+                                <span>{caveat}</span>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             </section>
 
@@ -353,3 +476,38 @@ function Metric({ label, value, zone, hint }: { label: string; value: string; zo
     );
 }
 
+
+type SliderProps = {
+    label: string;
+    value: number;
+    min: number;
+    max: number;
+    step: number;
+    format: (value: number) => string;
+    onChange: (value: number) => void;
+};
+
+/** Ползунок what-if: подпись, текущее значение и границы диапазона */
+function Slider({ label, value, min, max, step, format, onChange }: SliderProps) {
+    return (
+        <label className="block">
+            <span className="flex items-baseline justify-between gap-2">
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{label}</span>
+                <span className="text-sm font-semibold tabular-nums">{format(value)}</span>
+            </span>
+            <input
+                type="range"
+                min={min}
+                max={max}
+                step={step}
+                value={value}
+                onChange={(e) => onChange(Number(e.target.value))}
+                className="mt-2 w-full accent-indigo-600"
+            />
+            <span className="flex justify-between text-[11px] text-slate-400 dark:text-slate-500">
+                <span>{format(min)}</span>
+                <span>{format(max)}</span>
+            </span>
+        </label>
+    );
+}

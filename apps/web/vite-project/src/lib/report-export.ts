@@ -8,6 +8,7 @@ import {
     paybackZone,
     roiZone,
     budgetZone,
+    verdict,
     ZONE_LABEL,
     type Norms,
     type RobotInput,
@@ -92,6 +93,7 @@ export function buildReportWorkbook(site: SiteInput, robot: RobotInput, norms: N
     const raas = computeScenario("raas", site, robot, norms);
     const now = new Date();
 
+    const conclusion = verdict(base, buy, raas, norms);
     const pZone = paybackZone(buy.paybackYears);
     const rZone = roiZone(buy.roi);
     const bZone = budgetZone(buy.budgetShare);
@@ -130,6 +132,10 @@ export function buildReportWorkbook(site: SiteInput, robot: RobotInput, norms: N
             [`TCO за ${norms.horizonYears} лет, ₽`, Math.round(buy.tco)],
             ["CAPEX / бюджет, %", buy.budgetShare !== null ? Math.round(buy.budgetShare * 100) : "—"],
             ["Зона по бюджету", bZone ? ZONE_LABEL[bZone] : "—"],
+            [],
+            ["Заключение", conclusion.headline],
+            ...conclusion.reasons.map((reason, i) => [i === 0 ? "Основания" : "", reason] as Cell[]),
+            ...conclusion.caveats.map((caveat, i) => [i === 0 ? "Что проверить" : "", caveat] as Cell[]),
             [],
             ["Дисклеймер", "Предварительная оценка. Результат требует верификации при обследовании объекта."],
         ],
