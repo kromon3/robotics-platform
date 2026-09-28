@@ -26,6 +26,8 @@ export type ReportMeta = {
     throughputSource?: "specs" | "type-default";
     /** Оговорка поставщика данных к цене и ТТХ решения */
     note?: string;
+    /** Параметры, изменённые ползунками «что если» перед выгрузкой */
+    whatIf?: string[];
 };
 
 type Cell = string | number | null;
@@ -106,6 +108,8 @@ export function buildReportWorkbook(site: SiteInput, robot: RobotInput, norms: N
             ["Тип объекта", meta.objectType],
             ["Решение", meta.robotName],
             ["Дата расчёта", now.toLocaleString("ru-RU")],
+            // Книгу можно выгрузить после подбора параметров ползунками — фиксируем, что менялось
+            ...(meta.whatIf?.length ? [["Параметры изменены вручную", meta.whatIf.join("; ")] as Cell[]] : []),
             ["Версия каталога", meta.catalogVersion],
             ["Версия модели", meta.modelVersion],
             ["Источник ТТХ робота", meta.specsSource],

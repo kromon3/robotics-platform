@@ -1,4 +1,4 @@
-﻿import { useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import {
     Bar,
     BarChart,
@@ -48,7 +48,17 @@ const btnChart =
     "hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 " +
     "dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800";
 
-type Props = { site: SiteInput; robot: RobotInput; norms: Norms; meta?: ReportMeta };
+/** Значения, по которым отчёт посчитан прямо сейчас — с учётом ползунков «что если» */
+export type ReportInputs = { site: SiteInput; robot: RobotInput; norms: Norms; changes: string[] };
+
+type Props = {
+    site: SiteInput;
+    robot: RobotInput;
+    norms: Norms;
+    meta?: ReportMeta;
+    /** Чтобы выгрузка в Excel собиралась по тем же значениям, что показаны на экране */
+    onInputsChange?: (inputs: ReportInputs) => void;
+};
 
 /**
  * Экономический отчёт: показатели с зонами интерпретации (§11 модели), структура CAPEX,
@@ -56,7 +66,7 @@ type Props = { site: SiteInput; robot: RobotInput; norms: Norms; meta?: ReportMe
  * Блоки `hidden print:block` попадают только в PDF (ТЗ 3.7.3): титул, исходные данные,
  * нормативы, источники и ограничения — чтобы выгруженный отчёт читался без приложения.
  */
-export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseNorms, meta }: Props) {
+export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseNorms, meta, onInputsChange }: Props) {
     // What-if (ТЗ 3.5.3): три параметра, от которых сильнее всего зависит вывод.
     // Считаем в браузере теми же формулами, поэтому пересчёт мгновенный.
     const [salary, setSalary] = useState(baseSite.staffSalaryMonth);
@@ -78,19 +88,29 @@ export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseN
     const robot = useMemo<RobotInput>(() => ({ ...baseRobot, price }), [baseRobot, price]);
     const norms = useMemo<Norms>(() => ({ ...baseNorms, utilization }), [baseNorms, utilization]);
 
-    const whatIfChanges = [
-        salary !== baseSite.staffSalaryMonth ? `зарплата ${money(baseSite.staffSalaryMonth)} → ${money(salary)}` : null,
-        utilization !== baseNorms.utilization
-            ? `загрузка ${Math.round(baseNorms.utilization * 100)}% → ${Math.round(utilization * 100)}%`
-            : null,
-        price !== baseRobot.price ? `цена робота ${money(baseRobot.price)} → ${money(price)}` : null,
-    ].filter(Boolean) as string[];
+    // useMemo, а не просто массив: ссылка уходит в зависимости эффекта ниже
+    const whatIfChanges = useMemo(
+        () =>
+            [
+                salary !== baseSite.staffSalaryMonth ? `зарплата ${money(baseSite.staffSalaryMonth)} → ${money(salary)}` : null,
+                utilization !== baseNorms.utilization
+                    ? `загрузка ${Math.round(baseNorms.utilization * 100)}% → ${Math.round(utilization * 100)}%`
+                    : null,
+                price !== baseRobot.price ? `цена робота ${money(baseRobot.price)} → ${money(price)}` : null,
+            ].filter(Boolean) as string[],
+        [salary, utilization, price, baseSite.staffSalaryMonth, baseNorms.utilization, baseRobot.price],
+    );
 
     const resetWhatIf = () => {
         setSalary(baseSite.staffSalaryMonth);
         setUtilization(baseNorms.utilization);
         setPrice(baseRobot.price);
     };
+
+    // Отдаём наверх текущие значения: по ним собирается Excel, чтобы выгрузка не расходилась с экраном
+    useEffect(() => {
+        onInputsChange?.({ site, robot, norms, changes: whatIfChanges });
+    }, [onInputsChange, site, robot, norms, whatIfChanges]);
 
     // Контейнеры диаграмм — из них вынимается <svg> при выгрузке в PNG
     const capexChart = useRef<HTMLDivElement>(null);

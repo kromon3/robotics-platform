@@ -16,6 +16,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    # Стенд должен подниматься сам после перезагрузки машины
+    restart: unless-stopped
 
   api:
     build:

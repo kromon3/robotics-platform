@@ -10,7 +10,7 @@ import { toEconNumeric, useEconStore } from "../store/econStore";
 import { toVizRobot } from "../viz/robotSpecs";
 import { MODEL_VERSION, buildScenarios, toNorms, toSiteInput } from "../viz/adapter";
 import { exportReportToExcel, printReport, type ReportMeta } from "../lib/report-export";
-import { EconomicsReport } from "../components/EconomicsReport.tsx";
+import { EconomicsReport, type ReportInputs } from "../components/EconomicsReport.tsx";
 import { ScenarioView } from "../viz/core/ScenarioView";
 import { ErrorBoundary } from "../viz/core/ErrorBoundary";
 import "../viz/viz.css";
@@ -90,10 +90,19 @@ export function ProjectResult() {
         };
     }, [product]);
 
+    // Отчёт может быть пересчитан ползунками «что если» — выгружаем то, что видит пользователь,
+    // и подписываем в книге, какие параметры он менял. Сохранение расчёта при этом идёт по исходным.
+    const [shown, setShown] = useState<ReportInputs | null>(null);
+
     const downloadExcel = () => {
         if (!economics || !reportMeta) return;
-        exportReportToExcel(economics.site, economics.robot, economics.norms, reportMeta);
-        toast.success("Отчёт выгружен в Excel");
+        const inputs = shown ?? { ...economics, changes: [] };
+        exportReportToExcel(inputs.site, inputs.robot, inputs.norms, { ...reportMeta, whatIf: inputs.changes });
+        toast.success(
+            inputs.changes.length > 0
+                ? "Отчёт выгружен в Excel с изменёнными параметрами"
+                : "Отчёт выгружен в Excel",
+        );
     };
 
     // Сохранение: вместе с исходными данными кладём итоги сценария «покупка» — список показывается без пересчёта
@@ -210,7 +219,13 @@ export function ProjectResult() {
             )}
 
             {tab === "report" && economics && (
-                <EconomicsReport site={economics.site} robot={economics.robot} norms={economics.norms} meta={reportMeta} />
+                <EconomicsReport
+                    site={economics.site}
+                    robot={economics.robot}
+                    norms={economics.norms}
+                    meta={reportMeta}
+                    onInputsChange={setShown}
+                />
             )}
 
             {tab === "simulation" && scenarios && (
