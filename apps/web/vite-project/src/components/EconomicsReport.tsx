@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useMemo, useRef, useState } from "react";
 import {
     Bar,
     BarChart,
@@ -22,6 +22,7 @@ import {
     type Zone,
 } from "../viz/economics";
 import type { ReportMeta } from "../lib/report-export";
+import { downloadChartPng, slugify } from "../lib/chart-export";
 
 const ZONE_STYLE: Record<Zone, string> = {
     green: "border-green-300 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300",
@@ -42,6 +43,10 @@ const short = (n: number) =>
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900";
 const title = "mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400";
+const btnChart =
+    "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition " +
+    "hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 " +
+    "dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800";
 
 type Props = { site: SiteInput; robot: RobotInput; norms: Norms; meta?: ReportMeta };
 
@@ -86,6 +91,14 @@ export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseN
         setUtilization(baseNorms.utilization);
         setPrice(baseRobot.price);
     };
+
+    // Контейнеры диаграмм — из них вынимается <svg> при выгрузке в PNG
+    const capexChart = useRef<HTMLDivElement>(null);
+    const opexChart = useRef<HTMLDivElement>(null);
+    const cashflowChart = useRef<HTMLDivElement>(null);
+
+    // Какая диаграмма сейчас сохраняется (для подписи на кнопке)
+    const [savingChart, setSavingChart] = useState<string | null>(null);
 
     const buy = useMemo(() => computeScenario("buy", site, robot, norms), [site, robot, norms]);
     const raas = useMemo(() => computeScenario("raas", site, robot, norms), [site, robot, norms]);
@@ -147,6 +160,28 @@ export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseN
 
     const capexData = buy.capexItems.filter((i) => i.value > 0).map((i) => ({ name: i.label, value: Math.round(i.value), method: i.method, source: i.source }));
     const opexData = buy.opexItems.filter((i) => i.value > 0).map((i) => ({ name: i.label, value: Math.round(i.value), method: i.method, source: i.source }));
+
+    const baseName = slugify(meta?.projectName ?? "raschet");
+    const charts = [
+        { key: "capex", label: "Структура CAPEX", ref: capexChart },
+        { key: "opex", label: "Структура OPEX", ref: opexChart },
+        { key: "cashflow", label: "Денежный поток", ref: cashflowChart },
+    ];
+
+    const saveChart = async (chart: (typeof charts)[number]) => {
+        setSavingChart(chart.key);
+        const ok = await downloadChartPng(chart.ref.current, `${baseName}-${chart.key}`);
+        setSavingChart(null);
+        if (!ok) alert("Диаграмма ещё не отрисована — подождите пару секунд и повторите");
+    };
+
+    const saveAllCharts = async () => {
+        setSavingChart("all");
+        for (const chart of charts) {
+            await downloadChartPng(chart.ref.current, `${baseName}-${chart.key}`);
+        }
+        setSavingChart(null);
+    };
 
     return (
         <div className="flex flex-col gap-6 print:gap-4 print:text-slate-900">
@@ -299,7 +334,7 @@ export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseN
                 {/* CAPEX по статьям */}
                 <section className={card}>
                     <h3 className={title}>Структура CAPEX — {money(buy.capex)}</h3>
-                    <div className="h-64">
+                    <div className="h-64" ref={capexChart}>
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={capexData} layout="vertical" margin={{ left: 8, right: 16 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
@@ -322,7 +357,7 @@ export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseN
                 {/* OPEX по статьям */}
                 <section className={card}>
                     <h3 className={title}>Структура OPEX — {money(buy.opex)} / год</h3>
-                    <div className="h-64">
+                    <div className="h-64" ref={opexChart}>
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={opexData} layout="vertical" margin={{ left: 8, right: 16 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
@@ -346,7 +381,7 @@ export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseN
             {/* Накопленный денежный поток */}
             <section className={card}>
                 <h3 className={title}>Накопленный денежный поток</h3>
-                <div className="h-64">
+                <div className="h-64" ref={cashflowChart}>
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={cashflow}>
                             <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-slate-200 dark:text-slate-800" />
@@ -392,6 +427,37 @@ export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseN
                 </div>
                 <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
                     Вертикальная линия — базовый срок {buy.paybackYears ?? "—"} лет. Параметры отсортированы по влиянию: сверху то, что двигает результат сильнее.
+                </p>
+            </section>
+
+            {/* Диаграммы в PNG (ТЗ 3.7.4) — для презентации и переписки */}
+            <section className={`${card} print:hidden`}>
+                <h3 className={title}>Скачать диаграммы</h3>
+                <div className="flex flex-wrap gap-2">
+                    {charts.map((chart) => (
+                        <button
+                            key={chart.key}
+                            type="button"
+                            onClick={() => saveChart(chart)}
+                            disabled={savingChart !== null}
+                            className={btnChart}
+                        >
+                            {savingChart === chart.key ? "Сохраняю…" : chart.label}
+                            <span className="ml-1 text-xs opacity-60">PNG</span>
+                        </button>
+                    ))}
+                    <button
+                        type="button"
+                        onClick={saveAllCharts}
+                        disabled={savingChart !== null}
+                        className={`${btnChart} border-indigo-300 text-indigo-700 dark:border-indigo-800 dark:text-indigo-300`}
+                    >
+                        {savingChart === "all" ? "Сохраняю…" : "Все диаграммы"}
+                    </button>
+                </div>
+                <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+                    Файлы сохраняются на белом фоне в двойном разрешении и учитывают текущие значения what-if.
+                    Схема склада выгружается на вкладке «Схема и имитация».
                 </p>
             </section>
 
