@@ -8,6 +8,28 @@ import type { DatabaseMetadata } from '@adminjs/sql';
 const READONLY = { isVisible: { list: true, show: true, edit: false, filter: true } };
 const HIDDEN = { isVisible: false };
 
+/**
+ * isVisible прячет поле только в интерфейсе: в JSON ответа /admin/api/resources/...
+ * AdminJS отдаёт все колонки таблицы, включая хеш пароля. Вырезаем его из ответа сами.
+ */
+function stripSecret(field: string) {
+  type Record_ = { params?: Record<string, unknown> };
+  const clean = (record: Record_ | undefined) => {
+    if (record?.params) delete record.params[field];
+  };
+  return <T extends { record?: Record_; records?: Record_[] }>(response: T): T => {
+    clean(response?.record);
+    response?.records?.forEach(clean);
+    return response;
+  };
+}
+
+// Один и тот же хук на все действия, которые возвращают записи
+const withoutPassword = (() => {
+  const after = stripSecret('password');
+  return { list: { after }, show: { after }, new: { after }, edit: { after } };
+})();
+
 /** Служебные поля есть у всех таблиц: показываем, но не даём править */
 const timestamps = (created = 'created_at', updated = 'updated_at') => ({
   [created]: { ...READONLY, position: 100 },
@@ -157,6 +179,7 @@ export function adminResources(db: DatabaseMetadata): ResourceWithOptions[] {
       options: {
         id: 'User',
         navigation: { name: 'Пользователи', icon: 'Users' },
+        actions: withoutPassword,
         listProperties: ['email', 'name', 'createdAt'],
         editProperties: ['email', 'name', 'avatar'],
         properties: {
