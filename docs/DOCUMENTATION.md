@@ -37,7 +37,7 @@
 
 ## 2. Развёртывание и запуск (6.2)
 
-Подробно — в [`README.md`](../README.md). Кратко:
+Подробно — в [`README.md`](../README.md) и [`DEPLOY.md`](DEPLOY.md), где описано и развёртывание на сервере с нуля. Кратко:
 
 ```bash
 docker compose up --build
