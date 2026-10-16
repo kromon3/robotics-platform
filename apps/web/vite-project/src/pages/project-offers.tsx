@@ -149,6 +149,13 @@ export function ProjectOffers() {
     const best = ranked[0] ?? null;
     const rest = best ? ranked.slice(1) : ranked;
 
+    // Сравнение «это решение против рекомендованного»: ставим обе колонки и прокручиваем к таблице
+    const compareWithBest = (id: string) => {
+        if (!best) return;
+        setCompareIds([best.item.id, id]);
+        window.setTimeout(() => compareRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    };
+
     const toggleCompare = (id: string) =>
         setCompareIds((prev) =>
             prev.includes(id) ? prev.filter((x) => x !== id) : prev.length >= COMPARE_LIMIT ? prev : [...prev, id],
@@ -196,12 +203,13 @@ export function ProjectOffers() {
                 <div ref={compareRef} className="scroll-mt-4">
                 <CompareTable
                     items={compareItems}
-                    site={toSiteInput(p)}
-                    norms={DEFAULT_NORMS}
+                    norms={hasEcon ? toNorms(toEconNumeric(econ), DEFAULT_NORMS, p) : DEFAULT_NORMS}
+                    economics={new Map(ranked.map((r) => [r.item.id, r.economics]))}
+                    scores={new Map(ranked.map((r) => [r.item.id, r.score]))}
+                    recommendedId={best?.item.id}
                     onRemove={toggleCompare}
                     onClear={() => setCompareIds([])}
                     onChoose={choose}
-                    scores={new Map(ranked.map((r) => [r.item.id, r.score]))}
                 />
                 </div>
             )}
@@ -288,6 +296,16 @@ export function ProjectOffers() {
                                                 </p>
                                             )}
                                             <ScoreBreakdown parts={parts} />
+                                            {/* Самый частый сценарий сравнения — «это против рекомендованного», делаем его одной кнопкой */}
+                                            {best && !compareIds.includes(product.id) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => compareWithBest(product.id)}
+                                                    className="mt-2 w-full rounded-lg border border-indigo-300 px-3 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950/40"
+                                                >
+                                                    Сравнить с рекомендованным
+                                                </button>
+                                            )}
                                             <label className="mt-2 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
                                                 <input
                                                     type="checkbox"
@@ -296,7 +314,7 @@ export function ProjectOffers() {
                                                     disabled={!compareIds.includes(product.id) && compareIds.length >= COMPARE_LIMIT}
                                                     className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-400 disabled:opacity-40 dark:border-slate-700"
                                                 />
-                                                Сравнить
+                                                Добавить к сравнению
                                             </label>
                                             <button
                                                 type="button"

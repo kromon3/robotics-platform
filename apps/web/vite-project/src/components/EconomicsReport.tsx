@@ -42,6 +42,10 @@ const short = (n: number) =>
           : String(Math.round(n));
 
 const card = "rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900";
+// Колонка выгоднейшего сценария выделяется, чтобы вывод читался прямо из таблицы
+const winnerHead = "rounded-t-lg bg-indigo-50 px-2 text-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-100";
+const winnerCell = "bg-indigo-50/60 px-2 dark:bg-indigo-950/30";
+const winnerBadge = "ml-1 rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white";
 const title = "mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400";
 const btnChart =
     "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition " +
@@ -297,24 +301,59 @@ export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseN
                             <tr className="border-b border-slate-200 text-left text-slate-500 dark:border-slate-800 dark:text-slate-400">
                                 <th className="py-2 pr-4 font-medium">Показатель</th>
                                 <th className="py-2 pr-4 font-medium">Без роботизации</th>
-                                <th className="py-2 pr-4 font-medium">Покупка</th>
-                                <th className="py-2 font-medium">RaaS</th>
+                                <th className={`py-2 pr-4 font-medium ${conclusion.winner === "buy" ? winnerHead : ""}`}>
+                                    Покупка {conclusion.winner === "buy" && <span className={winnerBadge}>выгоднее</span>}
+                                </th>
+                                <th className={`py-2 font-medium ${conclusion.winner === "raas" ? winnerHead : ""}`}>
+                                    RaaS {conclusion.winner === "raas" && <span className={winnerBadge}>выгоднее</span>}
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {[
-                                ["Разовые затраты", "—", money(buy.capex), money(raas.capex)],
-                                ["OPEX / год", money(base.opex), money(buy.opex), money(raas.opex)],
-                                ["Годовой эффект", "—", money(buy.annualEffect), money(raas.annualEffect)],
-                                [`TCO за ${baseYears} лет`, money(base.tco), money(buy.tco), money(raas.tco)],
-                                ["Срок окупаемости", "—", buy.paybackYears !== null ? `${buy.paybackYears} лет` : "—", raas.paybackYears !== null ? `${raas.paybackYears} лет` : "нет разовых затрат"],
-                                ["Роботов", "—", `${buy.units} шт`, `${raas.units} шт`],
-                            ].map(([k, a, b, c]) => (
+                                { k: "Разовые затраты", a: "—", b: money(buy.capex), c: money(raas.capex), hint: "что платим сразу" },
+                                { k: "OPEX / год", a: money(base.opex), b: money(buy.opex), c: money(raas.opex), hint: "включая ФОТ оставшегося персонала" },
+                                { k: "Годовой эффект", a: "—", b: money(buy.annualEffect), c: money(raas.annualEffect), hint: "насколько дешевле, чем сейчас" },
+                                {
+                                    k: `TCO за ${baseYears} лет`,
+                                    a: money(base.tco),
+                                    b: money(buy.tco),
+                                    c: money(raas.tco),
+                                    hint: "решающий показатель сравнения",
+                                    diff: true,
+                                },
+                                {
+                                    k: "Срок окупаемости",
+                                    a: "—",
+                                    b: buy.paybackYears !== null ? `${buy.paybackYears} лет` : "—",
+                                    c: raas.paybackYears !== null ? `${raas.paybackYears} лет` : "нет разовых затрат",
+                                },
+                                { k: "Роботов", a: "—", b: `${buy.units} шт`, c: `${raas.units} шт` },
+                            ].map(({ k, a, b, c, hint, diff }) => (
                                 <tr key={k}>
-                                    <td className="py-2 pr-4 text-slate-500 dark:text-slate-400">{k}</td>
+                                    <td className="py-2 pr-4 text-slate-500 dark:text-slate-400">
+                                        {k}
+                                        {hint && <span className="block text-[11px] text-slate-400 dark:text-slate-500">{hint}</span>}
+                                    </td>
                                     <td className="py-2 pr-4 tabular-nums">{a}</td>
-                                    <td className="py-2 pr-4 font-medium tabular-nums">{b}</td>
-                                    <td className="py-2 tabular-nums">{c}</td>
+                                    <td className={`py-2 pr-4 font-medium tabular-nums ${conclusion.winner === "buy" ? winnerCell : ""}`}>
+                                        {b}
+                                        {diff && (
+                                            <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400">
+                                                {base.tco - buy.tco >= 0 ? "экономия " : "дороже на "}
+                                                {money(Math.abs(base.tco - buy.tco))}
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className={`py-2 tabular-nums ${conclusion.winner === "raas" ? winnerCell : ""}`}>
+                                        {c}
+                                        {diff && (
+                                            <span className="block text-[11px] text-slate-500 dark:text-slate-400">
+                                                {base.tco - raas.tco >= 0 ? "экономия " : "дороже на "}
+                                                {money(Math.abs(base.tco - raas.tco))}
+                                            </span>
+                                        )}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
