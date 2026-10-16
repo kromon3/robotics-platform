@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {Link, Navigate, useNavigate} from "react-router";
+import { DemoButton } from "../components/DemoButton.tsx";
 
 import axios from "axios";
 import {toast} from "sonner";
@@ -71,6 +72,8 @@ export function Auth() {
                         Подбор роботов, экономика и имитация — в одном расчёте
                     </p>
                 </div>
+
+                <DemoButton className="mb-5" />
 
                 {/* Карточка */}
                 <form

@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
+import { useDemoStore } from "../store/demoStore";
+import { DemoLock } from "../components/DemoLock.tsx";
 import { toast } from "sonner";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { A11y, EffectCreative } from "swiper/modules";
@@ -178,6 +180,7 @@ export function Project() {
     const [activeIndex, setActiveIndex] = useState(0);
     const navigate = useNavigate();
     const reset = useProjectStore((state) => state.reset);
+    const demo = useDemoStore((s) => s.active);
     const fillExample = useProjectStore((state) => state.fillExample);
 
     const isFirst = activeIndex === 0;
@@ -215,7 +218,7 @@ export function Project() {
                     </Link>
                     <h2 className="mt-1 text-xl font-semibold tracking-tight">Склад — параметры объекта</h2>
                 </div>
-                <div className="flex gap-4">
+                <div className={`flex gap-4 ${demo ? "hidden" : ""}`}>
                     <button
                         type="button"
                         onClick={fillExample}
@@ -278,10 +281,23 @@ export function Project() {
                                     {step.description && (
                                         <p className="mb-5 text-sm text-slate-500 dark:text-slate-400">{step.description}</p>
                                     )}
-                                    <div className={`mt-4 grid gap-4 ${GRID_COLUMNS[step.columns]}`}>
-                                        {step.fields.map((field) => (
-                                            <Field key={field.name} {...field} />
-                                        ))}
+                                    {/* В демо поля видно сквозь размытие, но править их нельзя */}
+                                    <div className="relative mt-4">
+                                        <div
+                                            className={`grid gap-4 ${GRID_COLUMNS[step.columns]} ${
+                                                demo ? "pointer-events-none select-none blur-[2px] saturate-50" : ""
+                                            }`}
+                                            aria-hidden={demo || undefined}
+                                        >
+                                            {step.fields.map((field) => (
+                                                <Field key={field.name} {...field} />
+                                            ))}
+                                        </div>
+                                        {demo && (
+                                            <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/40 p-4 backdrop-blur-[1px] dark:bg-slate-900/40">
+                                                <DemoLock />
+                                            </div>
+                                        )}
                                     </div>
                                 </fieldset>
                             </SwiperSlide>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router";
 import { Sidebar } from "../components/Sidebar.tsx";
+import { DemoBanner } from "../components/DemoBanner.tsx";
 import { navItems } from "../lib/nav.ts";
 
 export function AppLayout() {
@@ -50,6 +51,8 @@ export function AppLayout() {
                     </button>
                     <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
                 </header>
+
+                <DemoBanner />
 
                 <main className="flex-1 overflow-y-auto p-4 lg:p-6 print:overflow-visible print:p-0">
                     <Outlet />

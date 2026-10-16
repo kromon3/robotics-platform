@@ -47,6 +47,10 @@ type WizardProps<TName extends string> = {
     /** Шаг, на который перейти извне (например, после неуспешной валидации) */
     gotoStepRef?: React.MutableRefObject<((fieldName: TName) => void) | null>;
     header?: ReactNode;
+    /** Демо-режим: поля заполнены примером и недоступны для правки */
+    locked?: boolean;
+    /** Подпись поверх заблокированных полей */
+    lockedNote?: ReactNode;
 };
 
 const inputClass =
@@ -80,6 +84,8 @@ export function Wizard<TName extends string>({
     onSubmit,
     gotoStepRef,
     header,
+    locked = false,
+    lockedNote,
 }: WizardProps<TName>) {
     const swiperRef = useRef<SwiperClass | null>(null);
     const [activeIndex, setActiveIndex] = useState(0);
@@ -114,6 +120,7 @@ export function Wizard<TName extends string>({
                         name={name}
                         checked={Boolean(value)}
                         onChange={onChange}
+                        disabled={locked}
                         className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-400 dark:border-slate-700"
                     />
                     <span className="text-sm text-slate-700 dark:text-slate-300">{label}</span>
@@ -134,7 +141,7 @@ export function Wizard<TName extends string>({
                     )}
                 </span>
                 {type === "select" ? (
-                    <select className={inputClass} name={name} value={String(value)} onChange={onChange}>
+                    <select className={inputClass} name={name} value={String(value)} onChange={onChange} disabled={locked}>
                         <option value="">{emptyOption ?? "— Выберите —"}</option>
                         {getOptions?.(name).map((o) => (
                             <option key={o.value} value={o.value}>
@@ -149,6 +156,7 @@ export function Wizard<TName extends string>({
                         name={name}
                         value={String(value)}
                         onChange={onChange}
+                        disabled={locked}
                         min={type === "number" ? (limit?.min ?? 0) : undefined}
                         max={type === "number" ? limit?.max : undefined}
                         step={type === "number" ? "any" : undefined}
@@ -206,8 +214,21 @@ export function Wizard<TName extends string>({
                                     <p className="mb-5 text-sm text-slate-500 dark:text-slate-400">{step.description}</p>
                                 )}
                                 {step.fields.length > 0 && (
-                                    <div className={`mt-4 grid gap-4 ${GRID_COLUMNS[step.columns]}`}>
-                                        {step.fields.map(renderField)}
+                                    // В демо поля размываются и блокируются: данные показываем, править не даём
+                                    <div className="relative mt-4">
+                                        <div
+                                            className={`grid gap-4 ${GRID_COLUMNS[step.columns]} ${
+                                                locked ? "pointer-events-none select-none blur-[2px] saturate-50" : ""
+                                            }`}
+                                            aria-hidden={locked || undefined}
+                                        >
+                                            {step.fields.map(renderField)}
+                                        </div>
+                                        {locked && (
+                                            <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/40 p-4 backdrop-blur-[1px] dark:bg-slate-900/40">
+                                                {lockedNote}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                                 {step.content}

@@ -14,6 +14,8 @@ import {
 } from "../store/econStore";
 import { CARGO_TYPES, getInvalidFields, getMissingFields, useProjectStore } from "../store/store";
 import { pricedRacksFor, rackLabel } from "../viz/rackCatalog";
+import { useDemoStore } from "../store/demoStore";
+import { DemoLock } from "../components/DemoLock.tsx";
 
 const n = (v: number | "") => (v === "" ? 0 : v);
 
@@ -147,6 +149,7 @@ export function ProjectEconomics() {
     const navigate = useNavigate();
     const econ = useEconStore((s) => s.econ);
     const handleChange = useEconStore((s) => s.handleChange);
+    const demo = useDemoStore((s) => s.active);
     const fillExample = useEconStore((s) => s.fillExample);
     const reset = useEconStore((s) => s.reset);
     const setDefaults = useEconStore((s) => s.setDefaults);
@@ -193,7 +196,7 @@ export function ProjectEconomics() {
                     </Link>
                     <h2 className="mt-1 text-xl font-semibold tracking-tight">Данные для экономического расчёта</h2>
                 </div>
-                <div className="flex gap-4">
+                <div className={`flex gap-4 ${demo ? "hidden" : ""}`}>
                     <button type="button" onClick={() => fillExample(areaByDimensions ? { activeAreaM2: areaByDimensions } : undefined)} className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400">
                         Заполнить примером
                     </button>
@@ -223,6 +226,8 @@ export function ProjectEconomics() {
                     text: "Параметры объекта и грузопоток уже введены — здесь нужны календарь работы, персонал, инфраструктура и бюджет. По ним рассчитаем CAPEX, OPEX, годовой эффект, срок окупаемости, ROI и TCO по трём сценариям.",
                     button: "Начать →",
                 }}
+                locked={demo}
+                lockedNote={<DemoLock compact />}
                 submitLabel="Рассчитать →"
                 onSubmit={submit}
                 gotoStepRef={gotoField}
