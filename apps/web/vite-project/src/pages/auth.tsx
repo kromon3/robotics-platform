@@ -167,7 +167,11 @@ export function Auth() {
                 </form>
 
                 <p className="mt-6 text-center text-xs text-slate-400">
-                    Регистрируясь, вы принимаете условия использования демо-платформы
+                    Регистрируясь, вы даёте согласие на обработку персональных данных по 152-ФЗ и принимаете условия
+                    использования демо-платформы.{" "}
+                    <Link to="/privacy" className="font-medium text-indigo-600 hover:underline">
+                        Подробнее
+                    </Link>
                 </p>
             </div>
         </div>

@@ -1,0 +1,108 @@
+import { Link } from "react-router";
+
+// Уведомление об обработке персональных данных (152-ФЗ).
+// Текст описывает то, что платформа действительно хранит: учётную запись, сохранённые
+// расчёты на сервере и технические данные в браузере пользователя.
+
+const card = "rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900";
+const h3 = "text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400";
+
+export function Privacy() {
+    return (
+        <div className="mx-auto flex max-w-3xl flex-col gap-5 py-2">
+            <div>
+                <h2 className="text-xl font-semibold tracking-tight">Обработка персональных данных</h2>
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    Уведомление по Федеральному закону от 27.07.2006 № 152-ФЗ «О персональных данных». Платформа —
+                    демонстрационный прототип, созданный в рамках хакатона.
+                </p>
+            </div>
+
+            <section className={card}>
+                <h3 className={h3}>Какие данные обрабатываются</h3>
+                <table className="mt-3 w-full text-sm">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        <tr>
+                            <td className="py-2 pr-4 text-slate-500 dark:text-slate-400">Учётная запись</td>
+                            <td className="py-2">адрес электронной почты, имя, пароль в виде необратимого хеша</td>
+                        </tr>
+                        <tr>
+                            <td className="py-2 pr-4 text-slate-500 dark:text-slate-400">Сохранённые расчёты</td>
+                            <td className="py-2">
+                                параметры объекта, данные для экономики и результат; привязаны к идентификатору
+                                пользователя
+                            </td>
+                        </tr>
+                        <tr>
+                            <td className="py-2 pr-4 text-slate-500 dark:text-slate-400">В браузере</td>
+                            <td className="py-2">
+                                токен авторизации (содержит идентификатор и адрес электронной почты), черновики форм,
+                                выбор темы и признак демо-режима — в локальном хранилище вашего устройства
+                            </td>
+                        </tr>
+                        <tr>
+                            <td className="py-2 pr-4 text-slate-500 dark:text-slate-400">Журналы сервера</td>
+                            <td className="py-2">IP-адрес, время и адрес запроса — технические записи веб-сервера</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                    Специальные категории персональных данных, биометрия и платёжные реквизиты не собираются.
+                </p>
+            </section>
+
+            <section className={card}>
+                <h3 className={h3}>Зачем</h3>
+                <ul className="mt-2 space-y-1.5 text-sm text-slate-700 dark:text-slate-300">
+                    <li>— вход в систему и разграничение доступа к расчётам;</li>
+                    <li>— сохранение расчётов, чтобы вы могли вернуться к ним и воспроизвести результат;</li>
+                    <li>— работа интерфейса: черновики форм переживают перезагрузку страницы;</li>
+                    <li>— техническая диагностика по журналам сервера.</li>
+                </ul>
+                <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">
+                    Правовое основание — согласие субъекта персональных данных, которое вы даёте при регистрации
+                    (п. 1 ч. 1 ст. 6 152-ФЗ). Данные не передаются третьим лицам, не используются для рекламы и
+                    не обрабатываются автоматически для принятия решений в отношении вас.
+                </p>
+            </section>
+
+            <section className={card}>
+                <h3 className={h3}>Где и сколько хранится</h3>
+                <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
+                    Данные учётной записи и расчёты хранятся в базе PostgreSQL на сервере платформы, размещённом в
+                    Российской Федерации. Хранение — до удаления учётной записи или до завершения демонстрационного
+                    периода прототипа. Записи в локальном хранилище браузера удаляются при выходе из системы и очистке
+                    данных сайта.
+                </p>
+            </section>
+
+            <section className={card}>
+                <h3 className={h3}>Ваши права</h3>
+                <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
+                    Согласно ст. 14 152-ФЗ вы вправе получить сведения об обработке своих данных, потребовать их
+                    уточнения, блокирования или удаления, а также отозвать согласие. Расчёты удаляются кнопкой во
+                    вкладке «Расчёты»; для удаления учётной записи или отзыва согласия напишите команде проекта —
+                    контакты указаны в репозитории.
+                </p>
+            </section>
+
+            <section className="rounded-2xl border border-amber-300 bg-amber-50 p-6 dark:border-amber-900 dark:bg-amber-950/40">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+                    Важно про демонстрационный стенд
+                </h3>
+                <p className="mt-2 text-sm text-amber-900 dark:text-amber-200">
+                    Прототип работает по незащищённому протоколу HTTP: данные между браузером и сервером передаются без
+                    шифрования. Не вводите здесь реальные пароли, которыми пользуетесь в других сервисах, и не
+                    загружайте сведения, составляющие коммерческую тайну. Для знакомства с платформой достаточно
+                    демонстрационного режима — он не требует регистрации вообще.
+                </p>
+            </section>
+
+            <p className="text-center text-sm">
+                <Link to="/" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+                    ← Вернуться в приложение
+                </Link>
+            </p>
+        </div>
+    );
+}

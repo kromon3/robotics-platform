@@ -80,6 +80,13 @@ export function Sidebar({ open, onClose, darkMode, onToggleDark }: SidebarProps)
 
             {/* Низ: тема + пользователь */}
             <div className="space-y-3 border-t border-slate-200 p-3 dark:border-slate-800">
+                <Link
+                    to="/privacy"
+                    onClick={onClose}
+                    className="block px-3 text-[11px] text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                >
+                    Обработка персональных данных
+                </Link>
                 <button
                     type="button"
                     onClick={onToggleDark}

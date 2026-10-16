@@ -17,6 +17,8 @@ import {ProjectOffers} from "./pages/project-offers.tsx";
 import {Calculations} from "./pages/calculations.tsx";
 import {ProjectEconomics} from "./pages/project-economics.tsx";
 import {ProjectResult} from "./pages/project-result.tsx";
+import {Privacy} from "./pages/privacy.tsx";
+import {PrivacyNotice} from "./components/PrivacyNotice.tsx";
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -34,11 +36,14 @@ createRoot(document.getElementById('root')!).render(
                   <Route path="/robots/:id" element={<RobotDetail />} />
                   <Route path="/calculations" element={<Calculations />} />
                   <Route path="/settings" element={<Placeholder title="Настройки" />} />
+                  <Route path="/privacy" element={<Privacy />} />
               </Route>
 
               <Route path="/auth" element={<Auth />} />
               <Route path="/login" element={<Login />} />
           </Routes>
+          {/* Уведомление по 152-ФЗ — над всеми экранами, включая страницы входа */}
+          <PrivacyNotice />
       </BrowserRouter>
       <Toaster position="top-right" richColors />
   </StrictMode>,
