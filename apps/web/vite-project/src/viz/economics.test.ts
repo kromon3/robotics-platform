@@ -119,8 +119,26 @@ describe("§9. Итоговые показатели (покупка)", () => {
     it("ROI за 5 лет — 96%", () => {
         expect(buy.roi).toBeCloseTo(96, 0);
     });
-    it("TCO за 5 лет — 80 335 000 ₽", () => {
-        expect(buy.tco).toBeCloseTo(80_335_000, 0);
+    // По замечанию экономистов жюри: ФОТ людей, которых роботы не замещают, остаётся
+    // в сценарии. Иначе TCO покупки сравнивался с базовым, где ФОТ учтён полностью.
+    it("ФОТ оставшихся 12,4 чел. — 23 248 512 ₽/год, он входит в OPEX", () => {
+        expect(buy.remainingLabor).toBeCloseTo(23_248_512, 0);
+        expect(buy.opexItems.find((i) => i.key === "restLabor")!.value).toBeCloseTo(23_248_512, 0);
+        expect(buy.opex).toBeCloseTo(8_215_200 + 23_248_512, 0);
+    });
+    it("часть персонала остаётся при любом числе роботов", () => {
+        // Заведомо избыточная производительность: замещение упирается в потолок 80%
+        const e = computeScenario("buy", SITE, { ...ROBOT, throughputPerHour: 1000 }, NORMS);
+        expect(e.replacedWorkers).toBeCloseTo(SITE.staffCount * (1 - NORMS.minStaffShare), 1);
+        expect(e.remainingLabor).toBeGreaterThan(0);
+    });
+
+    it("экономия ФОТ не изменилась — 23 623 488 ₽/год", () => {
+        expect(buy.laborSaving).toBeCloseTo(23_623_488, 0);
+    });
+    it("TCO за 5 лет — 196 577 560 ₽ против 234 360 000 ₽ без роботизации", () => {
+        expect(buy.tco).toBeCloseTo(196_577_560, 0);
+        expect(computeScenario("baseline", SITE, ROBOT, NORMS).tco).toBeCloseTo(234_360_000, 0);
     });
     it("CAPEX / бюджет — 49%", () => {
         expect(buy.budgetShare! * 100).toBeCloseTo(49.07, 1);
@@ -130,11 +148,14 @@ describe("§9. Итоговые показатели (покупка)", () => {
 describe("§8. RaaS", () => {
     const raas = computeScenario("raas", SITE, ROBOT, NORMS);
 
-    it("OPEX — 3 робота × 250 000 ₽/мес × 12 = 9 000 000 ₽/год", () => {
-        expect(raas.opex).toBeCloseTo(9_000_000, 0);
+    it("платежи RaaS — 3 робота × 250 000 ₽/мес × 12 = 9 000 000 ₽/год", () => {
+        expect(raas.opexItems.find((i) => i.key === "raas")!.value).toBeCloseTo(9_000_000, 0);
     });
-    it("TCO за 5 лет — 45 000 000 ₽ при нулевом разовом платеже", () => {
-        expect(raas.tco).toBeCloseTo(45_000_000, 0);
+    it("полный OPEX — платежи RaaS плюс ФОТ оставшегося персонала", () => {
+        expect(raas.opex).toBeCloseTo(9_000_000 + 23_248_512, 0);
+    });
+    it("TCO за 5 лет — 161 242 560 ₽ при нулевом разовом платеже", () => {
+        expect(raas.tco).toBeCloseTo(161_242_560, 0);
     });
     it("без разового платежа срок окупаемости не определён (§8.6)", () => {
         expect(raas.paybackYears).toBeNull();

@@ -174,7 +174,7 @@ function assumptionsOf(e: ScenarioEconomics, n: Norms, robot: VizRobot, extra: {
         },
         {
             title: "Замещение персонала",
-            text: `Эффективная производительность робота ${e.effective.toFixed(1)} ед/ч ÷ выработка оператора ${n.workerOutputPerHour} ед/ч = ${(e.effective / n.workerOutputPerHour).toFixed(2)} чел. на робота; всего замещается ${e.replacedWorkers.toFixed(1)} чел. Экономия ФОТ = ${fmt(e.baselineOpex)} ₽/год (с начислениями ${n.payrollTax}).`,
+            text: `Эффективная производительность робота ${e.effective.toFixed(1)} ед/ч ÷ выработка оператора ${n.workerOutputPerHour} ед/ч = ${(e.effective / n.workerOutputPerHour).toFixed(2)} чел. на робота; всего замещается ${e.replacedWorkers.toFixed(1)} чел. Экономия ФОТ = ${fmt(e.laborSaving)} ₽/год, ФОТ оставшихся ${fmt(e.remainingLabor)} ₽/год остаётся в расчёте (с начислениями ${n.payrollTax}).`,
         },
         ...extra,
         {

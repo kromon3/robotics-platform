@@ -22,6 +22,9 @@ export type Norms = {
     capacityReserve: number; // резерв мощности, §3.3 (10%)
     // §4 — базовый сценарий
     workerOutputPerHour: number; // выработка оператора, паллет/ч, §4.2 (15)
+    // Доля персонала, которую роботизация не убирает при любом числе роботов:
+    // контроль, нестандартные операции, обслуживание роботов. Безлюдный склад нереалистичен
+    minStaffShare: number;
     payrollTax: number; // начисления на ФОТ, §4.1 (1,302)
     // §5 / §16.3 — CAPEX
     chargerPrice: number; // цена одной зарядной станции, ₽ (из КП; в демо 1 000 000)
@@ -67,6 +70,8 @@ export const DEFAULT_NORMS: Norms = {
     utilization: 0.7,
     capacityReserve: 0.1,
     workerOutputPerHour: 15,
+    // 20% — модельное допущение до уточнения экономистами команды
+    minStaffShare: 0.2,
     payrollTax: 1.302,
     chargerPrice: 1_000_000,
     chargersPerRobot: 1,
@@ -161,7 +166,10 @@ export const workersPerRobot = (r: RobotInput, n: Norms) =>
 
 /** §4.3 Экономия ФОТ = замещённые сотрудники × зарплата × 12 × начисления (не больше, чем есть людей) */
 export function laborSaving(s: SiteInput, r: RobotInput, n: Norms) {
-    const replaced = Math.min(robotsRequired(s, r, n) * workersPerRobot(r, n), s.staffCount);
+    // Замещение ограничено сверху: часть людей остаётся при любом числе роботов —
+    // контроль, нестандартные операции, обслуживание самих роботов
+    const maxReplaceable = s.staffCount * (1 - n.minStaffShare);
+    const replaced = Math.min(robotsRequired(s, r, n) * workersPerRobot(r, n), maxReplaceable);
     return { replaced, saving: replaced * s.staffSalaryMonth * 12 * n.payrollTax };
 }
 
@@ -245,8 +253,14 @@ export type ScenarioEconomics = {
     capexItems: CostItem[];
     opexItems: CostItem[];
     capex: number;
+    /** Полный годовой OPEX сценария, включая ФОТ персонала, который остался после роботизации */
     opex: number;
+    /** OPEX базового сценария — весь ФОТ объекта; с ним сравнивается opex */
     baselineOpex: number;
+    /** Экономия ФОТ: замещённые сотрудники с начислениями */
+    laborSaving: number;
+    /** ФОТ сотрудников, которых роботизация не заменяет */
+    remainingLabor: number;
     annualEffect: number;
     paybackYears: number | null;
     roi: number | null;
@@ -267,28 +281,42 @@ export function computeScenario(
 ): ScenarioEconomics {
     const units = robotsRequired(s, r, n);
     const { replaced, saving } = laborSaving(s, r, n);
-    // §9.5: база сравнения — ФОТ только замещаемой группы, не весь склад
-    const baselineOpex = saving;
+    // База сравнения — весь ФОТ объекта. Сравнивать только по замещаемой группе нельзя:
+    // тогда в сценарии с роботами пропадал бы ФОТ оставшихся людей, и TCO выходил заниженным.
+    const full = baselineLaborCost(s, n);
+    const remainingLabor = Math.max(0, full - saving);
 
     if (kind === "baseline") {
-        const full = baselineLaborCost(s, n);
         return {
             kind, units: 0, capexItems: [], opexItems: [
                 { key: "labor", label: "ФОТ персонала", value: full, method: `${s.staffCount} чел. × ${fmt(s.staffSalaryMonth)} ₽ × 12 × ${n.payrollTax}`, source: "dataset" },
             ],
-            capex: 0, opex: full, baselineOpex: full, annualEffect: 0,
+            capex: 0, opex: full, baselineOpex: full, laborSaving: 0, remainingLabor: full, annualEffect: 0,
             paybackYears: null, roi: null, tco: full * n.horizonYears, budgetShare: null,
             replacedWorkers: 0, peakDemand: peakDemandPerHour(s), effective: effectiveThroughput(r, n),
         };
     }
 
     const cItems = kind === "buy" ? capexItems(s, r, n) : raasSetupItems(n);
-    const oItems = kind === "buy" ? opexItems(s, r, n) : raasOpexItems(s, r, n);
+    // Роботы не убирают людей целиком: тех, кого они не замещают, продолжают оплачивать,
+    // и эти деньги обязаны остаться в сценарии — иначе он сравнивается с базовым нечестно
+    const oItems: CostItem[] = [
+        ...(kind === "buy" ? opexItems(s, r, n) : raasOpexItems(s, r, n)),
+        {
+            key: "restLabor",
+            label: "ФОТ оставшегося персонала",
+            value: remainingLabor,
+            method: `${Math.max(0, s.staffCount - replaced).toFixed(1)} чел. × ${fmt(s.staffSalaryMonth)} ₽ × 12 × ${n.payrollTax}`,
+            source: "dataset",
+        },
+    ];
     const capex = sum(cItems);
     const opex = sum(oItems);
-    const annualEffect = baselineOpex - opex; // §9.1
+    // §9.1: эффект — разница полных годовых затрат, то есть экономия ФОТ минус затраты на роботов
+    const annualEffect = full - opex;
     return {
-        kind, units, capexItems: cItems, opexItems: oItems, capex, opex, baselineOpex, annualEffect,
+        kind, units, capexItems: cItems, opexItems: oItems, capex, opex,
+        baselineOpex: full, laborSaving: saving, remainingLabor, annualEffect,
         paybackYears: annualEffect > 0 && capex > 0 ? +(capex / annualEffect).toFixed(2) : null, // §9.2
         roi: capex > 0 ? Math.round(((annualEffect * n.horizonYears - capex) / capex) * 100) : null, // §9.3
         tco: capex + opex * n.horizonYears, // §9.4
