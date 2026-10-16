@@ -11,8 +11,10 @@ import { m, rackTier } from "../viz/rackSpecs";
 import { CompareTable } from "../components/CompareTable.tsx";
 import { ScoreBadge, ScoreBreakdown } from "../components/ScoreBreakdown.tsx";
 import { rankOffers } from "../viz/ranking";
+import { RecommendedSolution } from "../components/RecommendedSolution.tsx";
 import { DEFAULT_NORMS } from "../viz/economics";
-import { toSiteInput } from "../viz/adapter";
+import { toEconNumeric, useEconStore } from "../store/econStore";
+import { toNorms, toSiteInput } from "../viz/adapter";
 
 // Сколько решений можно сравнивать одновременно: больше трёх колонок таблица не держит на ноутбуке
 const COMPARE_LIMIT = 3;
@@ -51,7 +53,10 @@ export function ProjectOffers() {
     const [error, setError] = useState<string | null>(null);
     const [showExcluded, setShowExcluded] = useState(false);
     const [compareIds, setCompareIds] = useState<string[]>([]);
+    const econ = useEconStore((s) => s.econ);
+    const hasEcon = Boolean(econ.workMode);
     const compareRef = useRef<HTMLDivElement>(null);
+    const othersRef = useRef<HTMLElement>(null);
 
     const ready = getMissingFields(formData).length === 0 && getInvalidFields(formData).length === 0;
 
@@ -112,12 +117,12 @@ export function ProjectOffers() {
                 verified: o.product.verified,
                 offer: o,
             })),
-            toSiteInput(p),
-            DEFAULT_NORMS,
+            toSiteInput(p, hasEcon ? toEconNumeric(econ) : undefined),
+            hasEcon ? toNorms(toEconNumeric(econ), DEFAULT_NORMS, p) : DEFAULT_NORMS,
             cargoMass,
             p.aisleWidth,
         );
-    }, [fit, p]);
+    }, [fit, p, econ, hasEcon]);
 
     if (!ready) return <Navigate to="/projects/warehouse" replace />;
 
@@ -140,6 +145,9 @@ export function ProjectOffers() {
         selectProduct(id);
         navigate("/projects/economics");
     };
+
+    const best = ranked[0] ?? null;
+    const rest = best ? ranked.slice(1) : ranked;
 
     const toggleCompare = (id: string) =>
         setCompareIds((prev) =>
@@ -228,11 +236,24 @@ export function ProjectOffers() {
                 </div>
             )}
 
+            {items && best && (
+                <RecommendedSolution
+                    product={best.item.offer.product}
+                    robot={best.item.offer.robot}
+                    score={best.score}
+                    parts={best.parts}
+                    economics={best.economics}
+                    preliminary={!hasEcon}
+                    onChoose={() => choose(best.item.offer.product.id)}
+                    onCompare={() => othersRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                />
+            )}
+
             {items && (
                 <>
-                    <section>
+                    <section ref={othersRef} className="scroll-mt-4">
                         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Подходят — {fit.length} · по убыванию оценки
+                            {best ? "Другие подходящие решения" : "Подходят"} — {best ? fit.length - 1 : fit.length} · по убыванию оценки
                         </h3>
                         {fit.length === 0 ? (
                             <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
@@ -240,7 +261,7 @@ export function ProjectOffers() {
                             </p>
                         ) : (
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                {ranked.map(({ item: { offer }, score, parts }, i) => {
+                                {rest.map(({ item: { offer }, score, parts }, i) => {
                                     const { product, robot, minAisle: aisle } = offer;
                                     return (
                                     // h-full: обёртка занимает всю ячейку грида, карточка (flex-1) растягивается,
@@ -249,7 +270,7 @@ export function ProjectOffers() {
                                         <RobotCard item={product} />
                                         <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
                                             <div className="mb-2">
-                                                <ScoreBadge score={score} rank={i + 1} />
+                                                <ScoreBadge score={score} rank={i + 2} />
                                             </div>
                                             <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                                                 <span>{robot.type}</span>

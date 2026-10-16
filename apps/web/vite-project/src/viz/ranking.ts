@@ -4,7 +4,14 @@
 // показывается пользователю в баллах, а сравнение идёт внутри набора подходящих решений
 // («лучшее из того, что подошло»), а не по абсолютной шкале.
 
-import { effectiveThroughput, peakDemandPerHour, robotsRequired, type Norms, type SiteInput } from "./economics";
+import {
+    computeScenario,
+    effectiveThroughput,
+    peakDemandPerHour,
+    type Norms,
+    type ScenarioEconomics,
+    type SiteInput,
+} from "./economics";
 import type { VizRobot } from "./robotSpecs";
 
 export type RankInput = {
@@ -33,12 +40,19 @@ export type ScorePart = {
     note: string;
 };
 
-export type Ranked<T> = { item: T; score: number; parts: ScorePart[] };
+export type Ranked<T> = {
+    item: T;
+    score: number;
+    parts: ScorePart[];
+    /** Полный расчёт сценария «покупка» для этого решения — им же считается оценка */
+    economics: ScenarioEconomics;
+};
 
 /** Веса в сумме дают 100 — итоговая оценка читается как проценты */
 export const WEIGHTS = {
-    fleetCost: 35,
-    units: 15,
+    payback: 25,
+    tco: 15,
+    units: 10,
     payload: 15,
     readiness: 15,
     dataTrust: 10,
@@ -46,7 +60,7 @@ export const WEIGHTS = {
 } as const;
 
 export const WEIGHT_NOTE =
-    "Веса: стоимость парка 35, число роботов 15, запас грузоподъёмности 15, готовность решения 15, достоверность ТТХ 10, запас по проходу 10.";
+    "Веса: срок окупаемости 25, TCO за горизонт 15, число роботов 10, запас грузоподъёмности 15, готовность решения 15, достоверность ТТХ 10, запас по проходу 10. Экономика — 50 баллов из 100.";
 
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -85,20 +99,22 @@ export function rankOffers<T extends RankInput>(
 ): Ranked<T>[] {
     if (items.length === 0) return [];
 
-    const metrics = items.map((i) => {
-        const units = robotsRequired(site, { name: i.robot.name, price: i.robot.price, throughputPerHour: i.robot.throughputPerHour }, norms);
-        return { id: i.id, units, fleet: units * i.robot.price };
-    });
-    const fleets = metrics.map((m) => m.fleet);
-    const unitCounts = metrics.map((m) => m.units);
-    const bestFleet = Math.min(...fleets);
+    // Экономику считаем для каждого подходящего решения, а не только для выбранного:
+    // платформа должна сама предлагать выгодный вариант, а не список совместимых (ТЗ 3.4.5).
+    const metrics = items.map((i) =>
+        computeScenario("buy", site, { name: i.robot.name, price: i.robot.price, throughputPerHour: i.robot.throughputPerHour }, norms),
+    );
 
-    const bestUnits = Math.min(...unitCounts);
+    const paybacks = metrics.map((m) => m.paybackYears).filter((v): v is number => v !== null);
+    const bestPayback = paybacks.length ? Math.min(...paybacks) : null;
+    const bestTco = Math.min(...metrics.map((m) => m.tco));
+    const bestUnits = Math.min(...metrics.map((m) => m.units));
     const peak = peakDemandPerHour(site);
 
     return items
         .map((item, n) => {
-            const { units, fleet } = metrics[n];
+            const economics = metrics[n];
+            const { units, tco, paybackYears, capex, annualEffect } = economics;
             const { robot } = item;
 
             // Запас грузоподъёмности: двукратный и выше считаем полным баллом
@@ -114,15 +130,31 @@ export function rankOffers<T extends RankInput>(
 
             const parts: ScorePart[] = [
                 {
-                    key: "fleetCost",
-                    label: "Стоимость парка",
-                    weight: WEIGHTS.fleetCost,
-                    value: lowerIsBetter(fleet, bestFleet),
+                    key: "payback",
+                    label: "Срок окупаемости",
+                    weight: WEIGHTS.payback,
+                    // Не окупается — ноль баллов: такое решение рекомендовать нельзя
+                    value: paybackYears === null || bestPayback === null ? 0 : lowerIsBetter(paybackYears, bestPayback),
                     points: 0,
                     note:
-                        fleet <= bestFleet * 1.02
-                            ? `${fmt(fleet)} ₽ — лучшая стоимость парка среди подходящих`
-                            : `${fmt(fleet)} ₽ — в ${(fleet / bestFleet).toFixed(1)} раза дороже лучшего (${fmt(bestFleet)} ₽)`,
+                        paybackYears === null
+                            ? annualEffect <= 0
+                                ? "не окупается: эксплуатация дороже замещаемого ФОТ"
+                                : "не окупается на этих параметрах"
+                            : bestPayback !== null && paybackYears <= bestPayback * 1.02
+                              ? `${paybackYears} г. — лучший срок среди подходящих решений`
+                              : `${paybackYears} г. против ${bestPayback} г. у лучшего решения`,
+                },
+                {
+                    key: "tco",
+                    label: "Совокупная стоимость владения",
+                    weight: WEIGHTS.tco,
+                    value: lowerIsBetter(tco, bestTco),
+                    points: 0,
+                    note:
+                        tco <= bestTco * 1.02
+                            ? `${fmt(tco)} ₽ за ${norms.horizonYears} лет — лучший показатель`
+                            : `${fmt(tco)} ₽ за ${norms.horizonYears} лет при ${fmt(bestTco)} ₽ у лучшего; разовые затраты ${fmt(capex)} ₽`,
                 },
                 {
                     key: "units",
@@ -170,7 +202,7 @@ export function rankOffers<T extends RankInput>(
             ].map((p) => ({ ...p, points: +(p.weight * p.value).toFixed(1) }));
 
             const score = Math.round(parts.reduce((a, p) => a + p.points, 0));
-            return { item, score, parts };
+            return { item, score, parts, economics };
         })
         .sort((a, b) => b.score - a.score || a.item.robot.price - b.item.robot.price);
 }

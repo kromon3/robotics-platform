@@ -96,6 +96,51 @@ describe("ранжирование подобранных решений", () =>
         expect(weakest(r.parts).key).toBe("readiness");
     });
 
+    it("экономика весит половину оценки: окупаемость 25 и TCO 15", () => {
+        expect(WEIGHTS.payback + WEIGHTS.tco).toBe(40);
+        expect(WEIGHTS.payback).toBeGreaterThan(WEIGHTS.payload);
+    });
+
+    it("решение, которое не окупается, теряет все баллы за срок окупаемости", () => {
+        // Дорогой и медленный: нужно 43 робота, их эксплуатация дороже замещаемого ФОТ
+        const ranked = rankOffers(
+            [offer("неокупаемый", {}, { price: 20_000_000, throughputPerHour: 5 }), offer("обычный")],
+            SITE, DEFAULT_NORMS, CARGO_KG, AISLE,
+        );
+        const bad = ranked.find((r) => r.item.id === "неокупаемый")!;
+        expect(bad.economics.paybackYears).toBeNull();
+        const payback = bad.parts.find((p) => p.key === "payback")!;
+        expect(payback.points).toBe(0);
+        expect(payback.note).toContain("не окупается");
+        expect(ranked[0].item.id).toBe("обычный");
+    });
+
+    it("плохая окупаемость почти обнуляет баллы, даже если решение формально окупается", () => {
+        const ranked = rankOffers(
+            [offer("дорогой", {}, { price: 40_000_000 }), offer("обычный")],
+            SITE, DEFAULT_NORMS, CARGO_KG, AISLE,
+        );
+        const dear = ranked.find((r) => r.item.id === "дорогой")!;
+        expect(dear.economics.paybackYears!).toBeGreaterThan(20);
+        expect(dear.parts.find((p) => p.key === "payback")!.points).toBeLessThan(2);
+    });
+
+    it("рекомендованным становится решение с лучшей окупаемостью", () => {
+        const ranked = rankOffers(
+            [offer("медленный", {}, { price: 3_000_000, throughputPerHour: 40 }), offer("быстрый", {}, { price: 3_000_000, throughputPerHour: 120 })],
+            SITE, DEFAULT_NORMS, CARGO_KG, AISLE,
+        );
+        expect(ranked[0].item.id).toBe("быстрый");
+        expect(ranked[0].economics.paybackYears!).toBeLessThan(ranked[1].economics.paybackYears!);
+    });
+
+    it("вместе с оценкой отдаётся полный расчёт сценария — его показывает карточка", () => {
+        const [top] = rankOffers([offer("a")], SITE, DEFAULT_NORMS, CARGO_KG, AISLE);
+        expect(top.economics.units).toBeGreaterThan(0);
+        expect(top.economics.capex).toBeGreaterThan(0);
+        expect(top.economics.capexItems.length).toBeGreaterThan(5);
+    });
+
     it("пустой список решений не ломает расчёт", () => {
         expect(rankOffers([], SITE, DEFAULT_NORMS, CARGO_KG, AISLE)).toEqual([]);
     });
