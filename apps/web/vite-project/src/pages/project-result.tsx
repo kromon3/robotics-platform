@@ -8,7 +8,8 @@ import { computeScenario } from "../viz/economics";
 import { getInvalidFields, getMissingFields, toNumericFormData, useProjectStore } from "../store/store";
 import { toEconNumeric, useEconStore } from "../store/econStore";
 import { toVizRobot } from "../viz/robotSpecs";
-import { MODEL_VERSION, buildScenarios, toNorms, toSiteInput } from "../viz/adapter";
+import { MODEL_VERSION, buildScenarios, normsFor, toNorms, toRobotInput, toSiteInput, type RouteOptions } from "../viz/adapter";
+import type { DockLayout } from "../viz/routeModel";
 import { exportReportToExcel, printReport, type ReportMeta } from "../lib/report-export";
 import { useDemoStore } from "../store/demoStore";
 import { EconomicsReport, type ReportInputs } from "../components/EconomicsReport.tsx";
@@ -58,23 +59,38 @@ export function ProjectResult() {
 
     const econNumeric = useMemo(() => toEconNumeric(econ), [econ]);
     const hasEcon = Boolean(econ.workMode);
+    const patchEcon = useEconStore((s) => s.patch);
+
+    // Расположение ворот и время погрузки берём из формы экономики даже без остальных её данных:
+    // переключатель в отчёте должен работать и на значениях демо-склада
+    const dockLayout: DockLayout = econ.dockLayout === "corner" ? "corner" : "center";
+    const handlingSec = econ.handlingSec || undefined;
+    const routeOpts = useMemo<RouteOptions>(() => ({ dock: dockLayout, handlingSec }), [dockLayout, handlingSec]);
 
     // Сценарии для схемы и имитации (компоненты warehouse-viz)
     const scenarios = useMemo(() => {
         if (!product) return null;
-        return buildScenarios(toNumericFormData(formData), toVizRobot(product), hasEcon ? econNumeric : undefined);
-    }, [product, formData, econNumeric, hasEcon]);
+        return buildScenarios(toNumericFormData(formData), toVizRobot(product), hasEcon ? econNumeric : undefined, undefined, routeOpts);
+    }, [product, formData, econNumeric, hasEcon, routeOpts]);
 
     // Входные данные экономической модели — для собственного отчёта
     const economics = useMemo(() => {
         if (!product) return null;
-        const robot = toVizRobot(product);
+        const viz = toVizRobot(product);
+        const form = toNumericFormData(formData);
+        const e = hasEcon ? econNumeric : undefined;
+        // Тот же toRobotInput, что на витрине и в схеме: производительность по модели маршрута
+        const robot = toRobotInput(viz, form, e, routeOpts);
         return {
-            site: toSiteInput(toNumericFormData(formData), hasEcon ? econNumeric : undefined),
-            robot: { name: robot.name, price: robot.price, throughputPerHour: robot.throughputPerHour },
-            norms: toNorms(hasEcon ? econNumeric : undefined, undefined, toNumericFormData(formData)),
+            site: toSiteInput(form, e),
+            robot,
+            norms: normsFor(toNorms(e, undefined, form), robot),
+            // Для мини-таблицы вариантов размещения в отчёте
+            robotFor: (opts: RouteOptions) => toRobotInput(viz, form, e, opts),
+            speedMps: viz.speedMps,
+            size: { width: form.width, length: form.length },
         };
-    }, [product, formData, econNumeric, hasEcon]);
+    }, [product, formData, econNumeric, hasEcon, routeOpts]);
 
     // Шапка выгружаемого отчёта: что считали, чем и на каких данных (ТЗ 3.1.5, 3.7.3)
     const reportMeta = useMemo<ReportMeta | undefined>(() => {
@@ -256,6 +272,18 @@ export function ProjectResult() {
                     norms={economics.norms}
                     meta={reportMeta}
                     onInputsChange={setShown}
+                    placement={
+                        economics.robot.route
+                            ? {
+                                  dock: dockLayout,
+                                  handlingSec: economics.robot.route.handlingSec,
+                                  robotFor: economics.robotFor,
+                                  speedMps: economics.speedMps,
+                                  size: economics.size,
+                                  onChange: (patch) => patchEcon(patch),
+                              }
+                            : undefined
+                    }
                 />
             )}
 

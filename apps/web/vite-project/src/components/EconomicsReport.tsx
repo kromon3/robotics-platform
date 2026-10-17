@@ -22,6 +22,8 @@ import {
     type Zone,
 } from "../viz/economics";
 import type { ReportMeta } from "../lib/report-export";
+import { routeExplanation, type RouteOptions, type RoutedRobotInput } from "../viz/adapter";
+import { DOCK_LABEL, type DockLayout } from "../viz/routeModel";
 import { downloadChartPng, slugify } from "../lib/chart-export";
 
 const ZONE_STYLE: Record<Zone, string> = {
@@ -55,6 +57,17 @@ const btnChart =
 /** Значения, по которым отчёт посчитан прямо сейчас — с учётом ползунков «что если» */
 export type ReportInputs = { site: SiteInput; robot: RobotInput; norms: Norms; changes: string[] };
 
+/** Расположение ворот и время погрузки: хранятся в форме экономики, отчёт их показывает и меняет */
+export type PlacementProps = {
+    dock: DockLayout;
+    handlingSec: number;
+    /** Робот для варианта размещения — тем же toRobotInput, что и основной расчёт */
+    robotFor: (opts: RouteOptions) => RoutedRobotInput;
+    speedMps: number;
+    size: { width: number; length: number };
+    onChange: (patch: { dockLayout?: DockLayout; handlingSec?: number }) => void;
+};
+
 type Props = {
     site: SiteInput;
     robot: RobotInput;
@@ -62,7 +75,11 @@ type Props = {
     meta?: ReportMeta;
     /** Чтобы выгрузка в Excel собиралась по тем же значениям, что показаны на экране */
     onInputsChange?: (inputs: ReportInputs) => void;
+    /** Модель маршрута; нет — робот стационарный или не хватает габаритов, блок не показывается */
+    placement?: PlacementProps;
 };
+
+const DOCKS: DockLayout[] = ["center", "corner"];
 
 /**
  * Экономический отчёт: показатели с зонами интерпретации (§11 модели), структура CAPEX,
@@ -70,7 +87,7 @@ type Props = {
  * Блоки `hidden print:block` попадают только в PDF (ТЗ 3.7.3): титул, исходные данные,
  * нормативы, источники и ограничения — чтобы выгруженный отчёт читался без приложения.
  */
-export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseNorms, meta, onInputsChange }: Props) {
+export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseNorms, meta, onInputsChange, placement }: Props) {
     // What-if (ТЗ 3.5.3): три параметра, от которых сильнее всего зависит вывод.
     // Считаем в браузере теми же формулами, поэтому пересчёт мгновенный.
     const [salary, setSalary] = useState(baseSite.staffSalaryMonth);
@@ -127,6 +144,18 @@ export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseN
     const buy = useMemo(() => computeScenario("buy", site, robot, norms), [site, robot, norms]);
     const raas = useMemo(() => computeScenario("raas", site, robot, norms), [site, robot, norms]);
     const base = useMemo(() => computeScenario("baseline", site, robot, norms), [site, robot, norms]);
+
+    // Варианты размещения ворот: тот же расчёт, меняется только средний пробег робота.
+    // Цена и загрузка — с учётом ползунков, чтобы таблица не расходилась с показателями ниже
+    const placementRows = useMemo(() => {
+        if (!placement) return [];
+        return DOCKS.map((dock) => {
+            const r = placement.robotFor({ dock, handlingSec: placement.handlingSec });
+            const e = computeScenario("buy", site, { ...r, price }, norms);
+            return { dock, route: r.route, perHour: r.throughputPerHour, units: e.units, capex: e.capex, payback: e.paybackYears };
+        });
+    }, [placement, site, norms, price]);
+    const routed = robot as Partial<RoutedRobotInput>;
 
     // §12: как срок окупаемости реагирует на ±20% ключевых параметров
     const sensitivity = useMemo(() => {
@@ -276,6 +305,95 @@ export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseN
                 <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
                     Пересчитываются все показатели ниже, включая заключение и схему затрат. На сохранённый расчёт не влияет.
                 </p>
+
+                {placement && (
+                    <div className="mt-5 border-t border-slate-200 pt-4 dark:border-slate-800">
+                        <div className="grid gap-4 sm:grid-cols-3">
+                            <div>
+                                <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Ворота приёмки и отгрузки</span>
+                                <div className="mt-2 inline-flex rounded-lg border border-slate-300 p-0.5 dark:border-slate-700" role="group">
+                                    {DOCKS.map((d) => (
+                                        <button
+                                            key={d}
+                                            type="button"
+                                            aria-pressed={placement.dock === d}
+                                            onClick={() => placement.onChange({ dockLayout: d })}
+                                            className={`rounded-md px-3 py-1 text-sm font-medium transition ${
+                                                placement.dock === d
+                                                    ? "bg-indigo-600 text-white"
+                                                    : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                                            }`}
+                                        >
+                                            {d === "center" ? "Центр стены" : "Угол"}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <Slider
+                                label="Погрузка и выгрузка за цикл"
+                                value={placement.handlingSec}
+                                min={5}
+                                max={60}
+                                step={1}
+                                format={(v) => `${v} с`}
+                                onChange={(v) => placement.onChange({ handlingSec: v })}
+                            />
+                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                                {routed.route && (
+                                    <>
+                                        Средний пробег <b className="tabular-nums text-slate-800 dark:text-slate-200">{routed.route.oneWayM.toLocaleString("ru-RU", { maximumFractionDigits: 1 })} м</b>, цикл{" "}
+                                        <b className="tabular-nums text-slate-800 dark:text-slate-200">{Math.round(routed.route.cycleSec)} с</b>, в расчёте{" "}
+                                        <b className="tabular-nums text-slate-800 dark:text-slate-200">{robot.throughputPerHour.toLocaleString("ru-RU")} ед/ч</b> на робота
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        <table className="mt-4 w-full text-sm">
+                            <thead>
+                                <tr className="text-left text-xs text-slate-500 dark:text-slate-400">
+                                    <th className="py-1 font-medium">Вариант размещения</th>
+                                    <th className="py-1 text-right font-medium">Пробег, м</th>
+                                    <th className="py-1 text-right font-medium">Роботов</th>
+                                    <th className="py-1 text-right font-medium">CAPEX</th>
+                                    <th className="py-1 text-right font-medium">Окупаемость</th>
+                                </tr>
+                            </thead>
+                            <tbody className="tabular-nums">
+                                {placementRows.map((row) => (
+                                    <tr
+                                        key={row.dock}
+                                        className={`border-t border-slate-100 dark:border-slate-800 ${row.dock === placement.dock ? "font-semibold" : ""}`}
+                                    >
+                                        <td className="py-1.5">
+                                            Ворота {DOCK_LABEL[row.dock]}
+                                            {row.dock === placement.dock && <span className="ml-1 text-xs font-normal text-indigo-600 dark:text-indigo-400">· текущий</span>}
+                                        </td>
+                                        <td className="py-1.5 text-right">{row.route ? row.route.oneWayM.toLocaleString("ru-RU", { maximumFractionDigits: 1 }) : "—"}</td>
+                                        <td className="py-1.5 text-right">{row.units}</td>
+                                        <td className="py-1.5 text-right">{short(row.capex)} ₽</td>
+                                        <td className="py-1.5 text-right">{row.payback !== null ? `${row.payback.toLocaleString("ru-RU")} г.` : "не окупается"}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {routed.route?.overridden ? (
+                            <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+                                Пробег задан в форме экономики (поле «Маршрут отборщика на строку») — он перекрывает расчёт по габаритам,
+                                поэтому расположение ворот на число роботов не влияет. Очистите поле, чтобы сравнить варианты.
+                            </p>
+                        ) : (
+                            <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                                Расположение ворот и время погрузки сохраняются в данных расчёта: витрина решений и схема пересчитываются вместе с отчётом.
+                            </p>
+                        )}
+                        {routed.route && (
+                            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                {routeExplanation(robot as RoutedRobotInput, placement.size, placement.speedMps)}
+                            </p>
+                        )}
+                    </div>
+                )}
             </section>
 
             {whatIfChanges.length > 0 && (
@@ -532,7 +650,7 @@ export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseN
                         ["Замещаемый персонал", `${site.staffCount} чел. × ${money(site.staffSalaryMonth)}/мес`],
                         ["Бюджет роботизации", money(site.budget)],
                         ["Решение", `${robot.name}, ${money(robot.price)} за единицу`],
-                        ["Паспортная производительность", `${robot.throughputPerHour} ед/ч`],
+                        ["Производительность в расчёте", `${robot.throughputPerHour} ед/ч`],
                         ["Расчётная потребность", `${Math.round(buy.peakDemand)} ед/ч в пик → ${buy.units} роботов`],
                     ]}
                 />
