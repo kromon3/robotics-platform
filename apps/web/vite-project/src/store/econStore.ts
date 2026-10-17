@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { ChangeEvent } from "react";
+import { DOCK_LABEL, ROUTE_DEFAULTS, type DockLayout } from "../viz/routeModel";
 
 // Вторая фаза визарда: данные для экономического расчёта (блоки A–L из ТЗ команды).
 // Вводятся после подбора робота — техническая совместимость от них не зависит.
@@ -24,6 +25,12 @@ export const FLOOR_FLATNESS: { value: FloorFlatness; label: string }[] = [
     { value: "din18202", label: "DIN 18202 (общестроительный допуск)" },
     { value: "din15185", label: "DIN 15185 (узкопроходные склады)" },
     { value: "unknown", label: "Не измерялось" },
+];
+
+/** Где ворота приёмки и отгрузки — от этого зависит средний пробег робота (src/viz/routeModel.ts) */
+export const DOCK_LAYOUTS: { value: DockLayout; label: string }[] = [
+    { value: "center", label: `Ворота ${DOCK_LABEL.center}` },
+    { value: "corner", label: `Ворота ${DOCK_LABEL.corner}` },
 ];
 
 /** Режим работы задаёт календарь: дни, смены, длительность, пиковый коэффициент (блок D ТЗ). */
@@ -60,6 +67,10 @@ export interface EconFormData {
     // H. Маршруты
     routeLengthPerLine: NumField;
     conveyorLength: NumField;
+    /** Расположение ворот приёмки/отгрузки — задаёт средний пробег робота */
+    dockLayout: DockLayout;
+    /** Погрузка + выгрузка за цикл робота, с */
+    handlingSec: NumField;
     // I–L. Инфраструктура и горизонт
     powerAvailableKw: NumField;
     hasWms: boolean;
@@ -77,6 +88,7 @@ const EMPTY: EconFormData = {
     staffTotal: "", staffPickers: "", staffForklift: "", staffPackers: "", salaryPicker: "", salaryForklift: "",
     payrollTaxPct: 30.2, pickerLinesPerHour: "", timeLossFactor: "",
     routeLengthPerLine: "", conveyorLength: "",
+    dockLayout: ROUTE_DEFAULTS.dock, handlingSec: ROUTE_DEFAULTS.handlingSec,
     powerAvailableKw: "", hasWms: false, hasErp: false, replacedEquipmentCost: "",
     budget: "", horizonYears: 5,
 };
@@ -88,7 +100,10 @@ export const ECON_EXAMPLE: EconFormData = {
     staffTotal: 40, staffPickers: 10, staffForklift: 25, staffPackers: 5,
     salaryPicker: 100_000, salaryForklift: 120_000, payrollTaxPct: 30.2,
     pickerLinesPerHour: 15, timeLossFactor: 0.12,
-    routeLengthPerLine: 35, conveyorLength: 120,
+    // Пробег не задан: его считает модель маршрута по габаритам и расположению ворот.
+    // Заданное значение перекрыло бы расчёт, и переключатель ворот в отчёте ничего бы не менял
+    routeLengthPerLine: "", conveyorLength: 120,
+    dockLayout: ROUTE_DEFAULTS.dock, handlingSec: ROUTE_DEFAULTS.handlingSec,
     powerAvailableKw: 250, hasWms: true, hasErp: true, replacedEquipmentCost: 0,
     budget: 80_000_000, horizonYears: 5,
 };
@@ -111,6 +126,7 @@ export const ECON_LIMITS: Partial<Record<EconFieldName, { min: number; max: numb
     timeLossFactor: { min: 0, max: 0.9 },
     routeLengthPerLine: { min: 0, max: 1000 },
     conveyorLength: { min: 0, max: 10_000 },
+    handlingSec: { min: 2, max: 120 },
     powerAvailableKw: { min: 0, max: 100_000 },
     replacedEquipmentCost: { min: 0, max: 1_000_000_000 },
     budget: { min: 100_000, max: 10_000_000_000 },
@@ -171,6 +187,8 @@ interface EconState {
     fillExample: (overrides?: Partial<EconFormData>) => void;
     /** Подставить значение, если пользователь его не вводил (вызывается из обработчиков, не из эффекта) */
     setDefaults: (values: Partial<EconFormData>) => void;
+    /** Поменять отдельные поля из отчёта (расположение ворот, время погрузки) — без событий формы */
+    patch: (values: Partial<EconFormData>) => void;
 }
 
 export const useEconStore = create<EconState>()(
@@ -201,11 +219,13 @@ export const useEconStore = create<EconState>()(
                         if (state.econ[k] === "") patch[k] = v;
                     return Object.keys(patch).length ? { econ: { ...state.econ, ...patch } } : state;
                 }),
+            patch: (values) => set((state) => ({ econ: { ...state.econ, ...values } })),
         }),
         {
             name: "project-econ",
-            // v2: из формы убраны поля, дублирующие первую фазу — выкидываем их из сохранённого состояния
-            version: 2,
+            // v2: из формы убраны поля, дублирующие первую фазу — выкидываем их из сохранённого состояния.
+            // v3: добавлены расположение ворот и время погрузки — у старых состояний берутся значения по умолчанию
+            version: 3,
             migrate: (persisted) => {
                 const saved = (persisted as { econ?: Record<string, unknown> })?.econ ?? {};
                 const econ = { ...EMPTY };

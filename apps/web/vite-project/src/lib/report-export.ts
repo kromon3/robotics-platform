@@ -184,7 +184,11 @@ export function buildReportWorkbook(site: SiteInput, robot: RobotInput, norms: N
             [],
             ["Цена решения", robot.price, "₽"],
             [
-                meta.throughputSource === "specs" ? "Производительность (паспорт)" : "Производительность (типовая для класса)",
+                "route" in robot && robot.route
+                    ? "Производительность по маршруту (пробег, цикл, зарядка)"
+                    : meta.throughputSource === "specs"
+                      ? "Производительность (паспорт)"
+                      : "Производительность (типовая для класса)",
                 robot.throughputPerHour,
                 "ед/ч",
             ],
