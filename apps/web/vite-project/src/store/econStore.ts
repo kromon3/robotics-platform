@@ -93,13 +93,17 @@ const EMPTY: EconFormData = {
     budget: "", horizonYears: 5,
 };
 
-/** Демо-склад из датасета «Склад» (§2 документа экономистов) */
+/**
+ * Демо-склад из датасета «Склад» (§2 документа экономистов), согласованный с EXAMPLE (48 × 30 м).
+ * Отборщиков 33: 6000 строк ÷ 22 ч ≈ 273 строки/ч ÷ 20 строк/ч на человека ≈ 14 на смене,
+ * две смены и 20% на отпуска, болезни и пики.
+ */
 export const ECON_EXAMPLE: EconFormData = {
-    activeAreaM2: 960, floors: 1, floorFlatness: "din18202", rackSystemId: "",
+    activeAreaM2: 1440, floors: 1, floorFlatness: "din18202", rackSystemId: "",
     workMode: "continuous", workingDaysPerYear: 365, shiftHours: 11, shiftsPerDay: 2, peakFactor: 1.5,
-    staffTotal: 40, staffPickers: 10, staffForklift: 25, staffPackers: 5,
+    staffTotal: 50, staffPickers: 33, staffForklift: 8, staffPackers: 9,
     salaryPicker: 100_000, salaryForklift: 120_000, payrollTaxPct: 30.2,
-    pickerLinesPerHour: 15, timeLossFactor: 0.12,
+    pickerLinesPerHour: 20, timeLossFactor: 0.12,
     // Пробег не задан: его считает модель маршрута по габаритам и расположению ворот.
     // Заданное значение перекрыло бы расчёт, и переключатель ворот в отчёте ничего бы не менял
     routeLengthPerLine: "", conveyorLength: 120,

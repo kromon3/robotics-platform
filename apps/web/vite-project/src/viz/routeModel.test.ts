@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { ROUTE_DEFAULTS, meanOneWay, routeCycle, type RouteParams } from "./routeModel";
 import { normsFor, toNorms, toRobotInput, toSiteInput, buildScenarios } from "./adapter";
-import { computeScenario, DEFAULT_NORMS } from "./economics";
+import { computeScenario, DEFAULT_NORMS, verdict } from "./economics";
 import { rankOffers } from "./ranking";
 import { EXAMPLE, toNumericFormData } from "../store/store";
 import { ECON_EXAMPLE, toEconNumeric } from "../store/econStore";
 import type { VizRobot } from "./robotSpecs";
 
-// Склад 40 × 24 м, робот 1,5 м/с — как демо-склад и Ronavi H1500
+// Склад 40 × 24 м, робот 1,5 м/с, как Ronavi H1500 — проверка формул на круглых числах
 const BASE: RouteParams = { widthM: 40, lengthM: 24, dock: "center", speedMps: 1.5, hoursPerDay: 8 };
 
 describe("модель маршрута: пробег", () => {
@@ -108,7 +108,7 @@ const H1500: VizRobot = {
     runtimeH: 10, chargeH: 2,
 };
 const P = toNumericFormData(EXAMPLE);
-const E = toEconNumeric({ ...ECON_EXAMPLE, activeAreaM2: 960 });
+const E = toEconNumeric({ ...ECON_EXAMPLE, activeAreaM2: Number(EXAMPLE.width) * Number(EXAMPLE.length) });
 const SITE = toSiteInput(P, E);
 const NORMS = toNorms(E, DEFAULT_NORMS, P);
 
@@ -117,29 +117,46 @@ const unitsFor = (dock: "center" | "corner") => {
     return { r, e: computeScenario("buy", SITE, r, normsFor(NORMS, r)) };
 };
 
-describe("демо-склад 40 × 24 м, Ronavi H1500", () => {
-    it("без модели маршрута — 6 роботов по типовым 90 ед/ч, как раньше", () => {
+describe("демо-склад 48 × 30 м, Ronavi H1500", () => {
+    it("без модели маршрута — 8 роботов по типовым 90 ед/ч, как раньше", () => {
         const r = toRobotInput(H1500, P, E, { enabled: false });
         expect(r.route).toBeNull();
-        expect(computeScenario("buy", SITE, r, normsFor(NORMS, r)).units).toBe(6);
+        expect(computeScenario("buy", SITE, r, normsFor(NORMS, r)).units).toBe(8);
     });
 
-    it("ворота в центре: пробег 26,4 м, цикл 64 с, 46,9 ед/ч → 10 роботов", () => {
+    it("ворота в центре: пробег 32,4 м, цикл 74 с, 40,5 ед/ч → 14 роботов", () => {
         const { r, e } = unitsFor("center");
-        expect(r.route?.oneWayM).toBeCloseTo(26.4, 6);
-        expect(r.route?.cycleSec).toBeCloseTo(64, 6);
-        expect(r.throughputPerHour).toBe(46.9);
+        expect(r.route?.oneWayM).toBeCloseTo(32.4, 6);
+        expect(r.route?.cycleSec).toBeCloseTo(74, 6);
+        expect(r.throughputPerHour).toBe(40.5);
         expect(normsFor(NORMS, r).utilization).toBe(0.85);
-        expect(e.units).toBe(10);
+        expect(e.units).toBe(14);
     });
 
-    it("ворота в углу: пробег 38,4 м, цикл 84 с → 12 роботов и CAPEX выше", () => {
+    it("ворота в углу: пробег 46,8 м, цикл 98 с → 18 роботов и CAPEX выше", () => {
         const corner = unitsFor("corner");
         const center = unitsFor("center");
-        expect(corner.r.route?.oneWayM).toBeCloseTo(38.4, 6);
-        expect(corner.r.route?.cycleSec).toBeCloseTo(84, 6);
-        expect(corner.e.units).toBe(12);
+        expect(corner.r.route?.oneWayM).toBeCloseTo(46.8, 6);
+        expect(corner.r.route?.cycleSec).toBeCloseTo(98, 6);
+        expect(corner.e.units).toBe(18);
         expect(corner.e.capex).toBeGreaterThan(center.e.capex);
+    });
+
+    it("демо окупается: ворота в центре — около 3 лет, в углу — дольше, но покупка всё равно выгоднее", () => {
+        const verdictFor = (dock: "center" | "corner") => {
+            const { r, e } = unitsFor(dock);
+            const n = normsFor(NORMS, r);
+            return { e, v: verdict(computeScenario("baseline", SITE, r, n), e, computeScenario("raas", SITE, r, n), n) };
+        };
+        const center = verdictFor("center");
+        const corner = verdictFor("corner");
+        expect(center.e.paybackYears).toBeGreaterThanOrEqual(2.5);
+        expect(center.e.paybackYears).toBeLessThanOrEqual(3.5);
+        expect(center.e.budgetShare).toBeLessThanOrEqual(1);
+        expect(center.v.winner).toBe("buy");
+        expect(corner.e.paybackYears).toBeGreaterThan(center.e.paybackYears! + 0.8);
+        expect(corner.e.roi).toBeGreaterThan(0);
+        expect(corner.v.winner).toBe("buy");
     });
 
     it("заявленная производителем производительность ограничивает маршрутную сверху", () => {
@@ -170,7 +187,7 @@ describe("демо-склад 40 × 24 м, Ronavi H1500", () => {
         const schemeUnits = scheme.kpis.find((k) => k.id === "units")?.value;
         expect(ranked.economics.units).toBe(report.units);
         expect(schemeUnits).toBe(report.units);
-        expect(scheme.kpis.find((k) => k.id === "route")?.value).toBe(38.4);
+        expect(scheme.kpis.find((k) => k.id === "route")?.value).toBe(46.8);
         expect(scheme.assumptions.some((a) => a.title === "Маршрут и время цикла")).toBe(true);
     });
 });
