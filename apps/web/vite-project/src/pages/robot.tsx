@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 import axios from "axios";
+import { toast } from "sonner";
 import { RobotCard } from "../components/RobotCard.tsx";
 import { Pagination } from "../components/Pagination.tsx";
 import { CatalogFilters } from "../components/CatalogFilters.tsx";
 import { useCatalogFilters } from "../hooks/useCatalogFilters.ts";
-import type { ProductsResponse } from "../api/catalog.ts";
+import { CompareBar } from "../components/CompareBar.tsx";
+import type { Product, ProductsResponse } from "../api/catalog.ts";
+import { useCompareStore } from "../store/compareStore.ts";
+import { COMPARE_LIMIT, serializeCompareIds } from "../lib/compare";
 
 const API_URL = import.meta.env.VITE_API_URL;
 const LIMIT = 20;
@@ -16,6 +21,33 @@ export function Robots() {
     const [data, setData] = useState<ProductsResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Сравнение прямо в каталоге: снабженец отмечает 2–3 решения и сравнивает их без входа и без параметров склада
+    const navigate = useNavigate();
+    const location = useLocation();
+    const compareIds = useCompareStore((s) => s.ids);
+    const compareProducts = useCompareStore((s) => s.products);
+    const toggleCompare = useCompareStore((s) => s.toggle);
+    const removeCompare = useCompareStore((s) => s.remove);
+    const clearCompare = useCompareStore((s) => s.clear);
+    const setCatalogSearch = useCompareStore((s) => s.setCatalogSearch);
+    const [compareMessage, setCompareMessage] = useState<string | null>(null);
+
+    // Запоминаем фильтры и страницу — из сравнения вернёмся туда же
+    useEffect(() => setCatalogSearch(location.search), [location.search, setCatalogSearch]);
+
+    const onToggleCompare = (product: Product) => {
+        const status = toggleCompare(product);
+        if (status === "limit") {
+            const text = `Сравнить можно не больше ${COMPARE_LIMIT} решений. Уберите одно из выбранных, чтобы добавить «${product.name}».`;
+            setCompareMessage(`Максимум ${COMPARE_LIMIT} — уберите одно из выбранных`);
+            toast.warning(text);
+        } else {
+            setCompareMessage(null);
+        }
+    };
+
+    const openCompare = () => navigate(`/robots/compare?ids=${encodeURIComponent(serializeCompareIds(compareIds))}`);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -65,7 +97,8 @@ export function Robots() {
     const items = data?.items ?? [];
 
     return (
-        <div className="flex flex-col gap-6">
+        // Отступ снизу, пока видна плашка сравнения, — иначе она закрывает пагинацию
+        <div className={`flex flex-col gap-6 ${compareIds.length > 0 ? "pb-24" : ""}`}>
             <div className="flex items-baseline justify-between">
                 <h2 className="text-xl font-semibold tracking-tight">Каталог решений</h2>
                 {data && (
@@ -91,10 +124,20 @@ export function Robots() {
                     ? Array.from({ length: 8 }).map((_, i) => (
                         <div
                             key={i}
-                            className="h-72 animate-pulse rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900"
+                            className="h-[30rem] animate-pulse rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900"
                         />
                     ))
-                    : items.map((item) => <RobotCard key={item.id} item={item} />)}
+                    : items.map((item) => (
+                        <RobotCard
+                            key={item.id}
+                            item={item}
+                            compare={{
+                                checked: compareIds.includes(item.id),
+                                full: compareIds.length >= COMPARE_LIMIT,
+                                onToggle: () => onToggleCompare(item),
+                            }}
+                        />
+                    ))}
             </div>
 
             {data && data.total === 0 && (
@@ -112,6 +155,20 @@ export function Robots() {
                     onChange={goToPage}
                 />
             )}
+
+            <CompareBar
+                selected={compareIds.map((id) => ({ id, name: compareProducts[id]?.name ?? "Решение" }))}
+                onCompare={openCompare}
+                onClear={() => {
+                    clearCompare();
+                    setCompareMessage(null);
+                }}
+                onRemove={(id) => {
+                    removeCompare(id);
+                    setCompareMessage(null);
+                }}
+                message={compareMessage}
+            />
         </div>
     );
 }

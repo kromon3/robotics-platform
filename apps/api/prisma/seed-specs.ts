@@ -71,6 +71,19 @@ async function linkWarehouseScenarios(prisma: PrismaClient, productId: string, r
     });
 }
 
+/**
+ * Дата актуализации из листа. В выгрузке Excel часть дат пришла серийным номером
+ * ("46289"), и new Date("46289") даёт 46288 год. Такие значения переводим по эпохе Excel.
+ */
+function parseSourceDate(value: string | null): Date | null {
+  if (!value) return null;
+  const serial = Number(value);
+  if (Number.isInteger(serial) && serial > 20000 && serial < 60000)
+    return new Date(Date.UTC(1899, 11, 30) + serial * 86_400_000);
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export async function seedRobotSpecs(prisma: PrismaClient) {
   const file = path.join(__dirname, 'data', 'robot-specs.json');
   if (!fs.existsSync(file)) {
@@ -148,7 +161,7 @@ export async function seedRobotSpecs(prisma: PrismaClient) {
     const data = {
       specs,
       sourceUrl: row.sourceUrl,
-      sourceDate: row.sourceDate ? new Date(row.sourceDate) : null,
+      sourceDate: parseSourceDate(row.sourceDate),
       verified: row.verified,
       ...(row.priceRub ? { price: row.priceRub } : {}),
     };
