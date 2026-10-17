@@ -14,8 +14,9 @@ model User {
   password String
   avatar   String?
 
-  UserRole UserRole[]
-  projects Project[]
+  UserRole      UserRole[]
+  projects      Project[]
+  quoteRequests QuoteRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -102,7 +103,8 @@ model Company {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  products Product[]
+  products       Product[]
+  quoteSuppliers QuoteRequestSupplier[]
 
   @@map("company")
 }
@@ -137,6 +139,7 @@ model Product {
   projects          Project[]
   productIndustries ProductIndustry[]
   productScenarios  ProductScenario[]
+  quoteItems        QuoteRequestItem[]
 
   @@index([companyId])
   @@index([type])
@@ -205,4 +208,102 @@ model ProductScenario {
 
   @@id([productId, scenarioId])
   @@map("product_scenario")
+}
+
+// Запрос коммерческого предложения (КП): снабженец сравнил 2–3 решения и просит у поставщиков цену.
+// Гостю вход не нужен — userId заполняется, только если запрос отправлен из аккаунта.
+// Один запрос может касаться нескольких поставщиков: у каждого своя часть (QuoteRequestSupplier)
+// со своими позициями и своим статусом — так поставщик видит только то, что спросили у него.
+enum QuoteRequestStatus {
+  NEW // принят платформой, поставщикам ещё не передан
+  SENT // передан поставщикам
+  ANSWERED // поставщик ответил
+  CLOSED // закрыт: КП получено или запрос отменён
+
+  @@map("quote_request_status")
+}
+
+model QuoteRequest {
+  id     String             @id @default(uuid(7))
+  // Человекочитаемый номер для пользователя и поставщика: КП-000042
+  number Int                @unique @default(autoincrement())
+  status QuoteRequestStatus @default(NEW)
+
+  // Контакт заказчика
+  contactName String  @map("contact_name") @db.VarChar(150)
+  company     String  @db.VarChar(200)
+  email       String  @db.VarChar(254)
+  phone       String? @db.VarChar(30)
+  inn         String? @db.VarChar(12)
+  comment     String? @db.Text
+
+  // Условия
+  deliveryRegion String @map("delivery_region") @db.VarChar(150)
+  // Желаемый срок: asap | 1-3m | 3-6m | 6-12m | exploring (подписи — на фронтенде)
+  timeframe      String @db.VarChar(20)
+
+  // Согласие на обработку персональных данных (152-ФЗ): факт, момент и версия уведомления
+  consentGiven   Boolean  @map("consent_given")
+  consentAt      DateTime @map("consent_at")
+  consentVersion String   @map("consent_version") @db.VarChar(30)
+
+  // Откуда отправлен: compare — из сравнения, detail — со страницы решения
+  source String? @db.VarChar(20)
+
+  userId String? @map("user_id")
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  suppliers QuoteRequestSupplier[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("quote_request")
+}
+
+// Часть запроса для одного поставщика. Название компании — снимок на момент запроса:
+// если поставщика переименуют или удалят из каталога, запрос останется читаемым.
+model QuoteRequestSupplier {
+  id        String       @id @default(uuid(7))
+  requestId String       @map("request_id")
+  request   QuoteRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  companyId   String?  @map("company_id")
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyName String   @map("company_name") @db.VarChar(150)
+
+  status QuoteRequestStatus @default(NEW)
+  sentAt DateTime?          @map("sent_at")
+
+  items QuoteRequestItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([requestId, companyId])
+  @@index([companyId])
+  @@map("quote_request_supplier")
+}
+
+// Позиция запроса: решение и количество. Название и цена — снимок из каталога на момент запроса.
+model QuoteRequestItem {
+  id         String               @id @default(uuid(7))
+  supplierId String               @map("supplier_id")
+  supplier   QuoteRequestSupplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  productId      String?  @map("product_id")
+  product        Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productName    String   @map("product_name") @db.VarChar(200)
+  unitPrice      Decimal? @map("unit_price") @db.Decimal(15, 2)
+  catalogVersion Int      @map("catalog_version")
+  quantity       Int
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([supplierId])
+  @@index([productId])
+  @@map("quote_request_item")
 }

@@ -1,33 +1,35 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
-import axios from "axios";
 import { productPhotoUrl, type Product } from "../api/catalog.ts";
 import { CompareView } from "../components/CompareView.tsx";
 import { useCompareStore } from "../store/compareStore.ts";
 import { COMPARE_LIMIT, COMPARE_MIN, parseCompareIds, serializeCompareIds } from "../lib/compare";
 import { DATA_GROUP, SPEC_GROUP, formatPrice, productRows, type ProductCompareItem } from "../lib/product-compare";
 import { toVizRobot } from "../viz/robotSpecs";
+import { useProductsByIds } from "../hooks/useProductsByIds.ts";
 
 // Сравнение решений из каталога «Роботы» — для снабженца, который зашёл гостем,
 // отметил 2–3 решения и хочет понять, чем они отличаются, прежде чем запрашивать КП.
 // Только характеристики и происхождение данных: экономика зависит от объекта, а его здесь нет.
 // Набор — в адресе (?ids=…), так ссылкой можно поделиться; выбор синхронизирован с каталогом.
 
-const API_URL = import.meta.env.VITE_API_URL;
 const GROUPS = [SPEC_GROUP, DATA_GROUP];
+
+/** Запрос КП по набору сравнения; selected — из колонки: отмечено одно решение, остальные можно добавить */
+function quoteUrl(ids: string[], selected?: string) {
+    const params = new URLSearchParams({ ids: serializeCompareIds(ids), source: "compare" });
+    if (selected) params.set("selected", selected);
+    return `/robots/quote?${params.toString()}`;
+}
 const ROWS = productRows("declared");
 
 export function RobotCompare() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const storeIds = useCompareStore((s) => s.ids);
-    const products = useCompareStore((s) => s.products);
     const setIds = useCompareStore((s) => s.setIds);
-    const remember = useCompareStore((s) => s.remember);
     const clear = useCompareStore((s) => s.clear);
     const catalogSearch = useCompareStore((s) => s.catalogSearch);
-    // Ошибка привязана к набору, который грузили: сменился набор — старая ошибка не показывается
-    const [failed, setFailed] = useState<{ key: string; message: string } | null>(null);
 
     const urlIds = useMemo(() => parseCompareIds(searchParams.get("ids")), [searchParams]);
     // Без ?ids= берём выбор из каталога
@@ -42,30 +44,10 @@ export function RobotCompare() {
         }
     }, [urlIds, storeIds, setIds, setSearchParams]);
 
-    // Решения, которых нет в кэше (ссылка из другого браузера), догружаем по одному
-    const missing = ids.filter((id) => !products[id]);
-    const missingKey = missing.join(",");
-    useEffect(() => {
-        if (!missingKey) return;
-        const controller = new AbortController();
-        Promise.all(
-            missingKey.split(",").map((id) =>
-                axios.get<Product>(`${API_URL}/catalog/products/${id}`, { signal: controller.signal }).then((r) => r.data),
-            ),
-        )
-            .then(remember)
-            .catch((err) => {
-                if (axios.isCancel(err)) return;
-                setFailed({ key: missingKey, message: err instanceof Error ? err.message : "Что-то пошло не так" });
-            });
-        return () => controller.abort();
-    }, [missingKey, remember]);
-
-    const error = failed && failed.key === missingKey ? failed.message : null;
-
+    const { products, loading, error } = useProductsByIds(ids);
     const items: ProductCompareItem[] = useMemo(
-        () => ids.filter((id) => products[id]).map((id) => ({ product: products[id], robot: toVizRobot(products[id]) })),
-        [ids, products],
+        () => products.map((product) => ({ product, robot: toVizRobot(product) })),
+        [products],
     );
 
     const backTo = `/robots${catalogSearch}`;
@@ -81,27 +63,35 @@ export function RobotCompare() {
         navigate(backTo);
     };
 
-    const loading = missing.length > 0 && !error;
-
     return (
         <div className="flex flex-col gap-6">
-            <div>
-                <Link
-                    to={backTo}
-                    className="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                >
-                    ← К каталогу
-                </Link>
-                <h2 className="mt-2 text-xl font-semibold tracking-tight">Сравнение решений</h2>
-                <p className="mt-2 max-w-3xl text-sm text-slate-500 dark:text-slate-400">
-                    Характеристики, заявленные производителями, и происхождение данных: источник, проверка, дата.
-                    Подсвечены строки, где решения различаются; звёздочкой — лучшее значение там, где «лучше» очевидно.
-                    Экономику здесь не считаем — она зависит от вашего объекта:{" "}
-                    <Link to="/projects" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
-                        рассчитать окупаемость для склада
+            <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                    <Link
+                        to={backTo}
+                        className="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                    >
+                        ← К каталогу
                     </Link>
-                    .
-                </p>
+                    <h2 className="mt-2 text-xl font-semibold tracking-tight">Сравнение решений</h2>
+                    <p className="mt-2 max-w-3xl text-sm text-slate-500 dark:text-slate-400">
+                        Характеристики, заявленные производителями, и происхождение данных: источник, проверка, дата.
+                        Подсвечены строки, где решения различаются; звёздочкой — лучшее значение там, где «лучше» очевидно.
+                        Экономику здесь не считаем — она зависит от вашего объекта:{" "}
+                        <Link to="/projects" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+                            рассчитать окупаемость для склада
+                        </Link>
+                        .
+                    </p>
+                </div>
+                {!loading && items.length >= COMPARE_MIN && (
+                    <Link
+                        to={quoteUrl(ids)}
+                        className="shrink-0 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+                    >
+                        Запросить КП ({items.length})
+                    </Link>
+                )}
             </div>
 
             {error && (
@@ -142,6 +132,12 @@ export function RobotCompare() {
                     renderFooter={(i) => (
                         <div className="flex flex-col gap-1.5">
                             <Link
+                                to={quoteUrl(ids, i.product.id)}
+                                className="block rounded-lg bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+                            >
+                                Запросить КП
+                            </Link>
+                            <Link
                                 to={`/robots/${i.product.id}`}
                                 className="block rounded-lg border border-slate-300 px-3 py-2 text-center text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                             >
@@ -152,7 +148,7 @@ export function RobotCompare() {
                                     href={i.product.sourceUrl}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="text-center text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+                                    className="text-center text-xs text-slate-500 hover:underline dark:text-slate-400"
                                 >
                                     Сайт поставщика ↗
                                 </a>
