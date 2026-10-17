@@ -9,15 +9,14 @@ import { checkCompat, minAisle } from "../viz/core/rules";
 import { checkLift } from "../viz/liftRules";
 import { m, rackTier } from "../viz/rackSpecs";
 import { CompareTable } from "../components/CompareTable.tsx";
-import { ScoreBadge, ScoreBreakdown } from "../components/ScoreBreakdown.tsx";
+import { CompareBar } from "../components/CompareBar.tsx";
+import { COMPARE_LIMIT, formatNumber, toggleCompareId } from "../lib/compare";
 import { rankOffers } from "../viz/ranking";
 import { RecommendedSolution } from "../components/RecommendedSolution.tsx";
 import { DEFAULT_NORMS } from "../viz/economics";
 import { toEconNumeric, useEconStore } from "../store/econStore";
 import { toNorms, toSiteInput } from "../viz/adapter";
-
-// Сколько решений можно сравнивать одновременно: больше трёх колонок таблица не держит на ноутбуке
-const COMPARE_LIMIT = 3;
+import { toast } from "sonner";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -38,12 +37,6 @@ async function fetchWarehouseProducts(signal: AbortSignal): Promise<Product[]> {
 }
 
 type Offer = { product: Product; robot: VizRobot; reasons: string[]; minAisle: number };
-
-const SOURCE_LABEL: Record<VizRobot["specsSource"], string> = {
-    specs: "ТТХ из каталога",
-    v0: "ТТХ: оценка по открытым источникам",
-    "type-default": "ТТХ: типовые для класса",
-};
 
 export function ProjectOffers() {
     const navigate = useNavigate();
@@ -158,17 +151,19 @@ export function ProjectOffers() {
         window.setTimeout(() => compareRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
     };
 
-    const toggleCompare = (id: string) =>
-        setCompareIds((prev) =>
-            prev.includes(id) ? prev.filter((x) => x !== id) : prev.length >= COMPARE_LIMIT ? prev : [...prev, id],
-        );
+    // Тот же лимит и та же логика, что в каталоге (lib/compare.ts); о лимите — сообщением, а не молча
+    const toggleCompare = (id: string) => {
+        const { ids, status } = toggleCompareId(compareIds, id);
+        if (status === "limit") toast.warning(`Сравнить можно не больше ${COMPARE_LIMIT} решений. Уберите одно из выбранных.`);
+        setCompareIds(ids);
+    };
 
     const compareItems = compareIds
         .map((id) => fit.find((o) => o.product.id === id))
         .filter((o): o is Offer => Boolean(o));
 
     return (
-        <div className="flex flex-col gap-6">
+        <div className={`flex flex-col gap-6 ${compareIds.length > 0 ? "pb-24" : ""}`}>
             <div>
                 <Link to="/projects/warehouse" className="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
                     ← Изменить параметры
@@ -217,34 +212,13 @@ export function ProjectOffers() {
             )}
 
             {/* Плашка внизу экрана: без неё таблица сравнения отрисовывается выше списка и её не видно */}
-            {compareIds.length > 0 && (
-                <div className="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4 print:hidden">
-                    <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
-                        <span className="text-sm text-slate-600 dark:text-slate-300">
-                            К сравнению: {compareIds.length} из {COMPARE_LIMIT}
-                        </span>
-                        {compareItems.length > 1 ? (
-                            <button
-                                type="button"
-                                onClick={() => compareRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                                className="rounded-full bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-indigo-500"
-                            >
-                                Показать сравнение
-                            </button>
-                        ) : (
-                            <span className="text-sm text-slate-400 dark:text-slate-500">отметьте ещё одно решение</span>
-                        )}
-                        <button
-                            type="button"
-                            onClick={() => setCompareIds([])}
-                            aria-label="Очистить сравнение"
-                            className="text-slate-400 transition hover:text-slate-700 dark:hover:text-slate-200"
-                        >
-                            ×
-                        </button>
-                    </div>
-                </div>
-            )}
+            <CompareBar
+                selected={compareIds.map((id) => ({ id, name: fit.find((o) => o.product.id === id)?.product.name ?? "Решение" }))}
+                compareLabel="Показать сравнение"
+                onCompare={() => compareRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                onClear={() => setCompareIds([])}
+                onRemove={toggleCompare}
+            />
 
             {items && best && (
                 <RecommendedSolution
@@ -273,60 +247,44 @@ export function ProjectOffers() {
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                 {rest.map(({ item: { offer }, score, parts }, i) => {
                                     const { product, robot, minAisle: aisle } = offer;
+                                    const inCompare = compareIds.includes(product.id);
                                     return (
-                                    // h-full: обёртка занимает всю ячейку грида, карточка (flex-1) растягивается,
-                                    // блок ТТХ и кнопка встают на одну линию во всём ряду
-                                    <div key={product.id} className="flex h-full flex-col gap-2">
-                                        <RobotCard item={product} />
-                                        <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-                                            <div className="mb-2">
-                                                <ScoreBadge score={score} rank={i + 2} />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                                                <span>{robot.type}</span>
-                                                <span>{robot.w} × {robot.l} м</span>
-                                                <span>до {robot.payloadKg.toLocaleString("ru-RU")} кг</span>
-                                                <span title={robot.throughputSource === "specs" ? "заявлена производителем" : "типовое значение для класса"}>
-                                                    {robot.throughputPerHour} ед/ч{robot.throughputSource === "specs" ? "" : " ≈"}
-                                                </span>
-                                                <span className="col-span-2">{aisle > 0 ? `проход ≥ ${aisle} м` : " "}</span>
-                                            </div>
-                                            <div className="mt-1 truncate text-[11px] text-slate-400 dark:text-slate-500">{SOURCE_LABEL[robot.specsSource]}</div>
-                                            {robot.note && (
-                                                <p className="mt-1 text-[11px] leading-snug text-amber-700 dark:text-amber-400" title={robot.note}>
-                                                    ⚠ {robot.note.length > 90 ? robot.note.slice(0, 90) + "…" : robot.note}
-                                                </p>
-                                            )}
-                                            <ScoreBreakdown parts={parts} />
-                                            {/* Самый частый сценарий сравнения — «это против рекомендованного», делаем его одной кнопкой */}
-                                            {best && !compareIds.includes(product.id) && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => compareWithBest(product.id)}
-                                                    className="mt-2 w-full rounded-lg border border-indigo-300 px-3 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950/40"
-                                                >
-                                                    Сравнить с рекомендованным
-                                                </button>
-                                            )}
-                                            <label className="mt-2 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={compareIds.includes(product.id)}
-                                                    onChange={() => toggleCompare(product.id)}
-                                                    disabled={!compareIds.includes(product.id) && compareIds.length >= COMPARE_LIMIT}
-                                                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-400 disabled:opacity-40 dark:border-slate-700"
-                                                />
-                                                Добавить к сравнению
-                                            </label>
-                                            <button
-                                                type="button"
-                                                onClick={() => choose(product.id)}
-                                                className="mt-2 w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
-                                            >
-                                                Выбрать для расчёта
-                                            </button>
-                                        </div>
-                                    </div>
+                                        <RobotCard
+                                            key={product.id}
+                                            item={product}
+                                            variant="showcase"
+                                            robot={robot}
+                                            score={{ score, rank: i + 2, parts }}
+                                            extraSpec={aisle > 0 ? { label: "Нужен проход", value: `≥ ${formatNumber(aisle, 2)} м` } : undefined}
+                                            compare={{
+                                                checked: inCompare,
+                                                full: compareIds.length >= COMPARE_LIMIT,
+                                                onToggle: () => toggleCompare(product.id),
+                                            }}
+                                            actions={
+                                                <>
+                                                    {/* Самый частый сценарий сравнения — «это против рекомендованного», делаем его одной кнопкой */}
+                                                    {/* Кнопка остаётся и у отмеченных (неактивной) — высота действий одна во всём ряду */}
+                                                    {best && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => compareWithBest(product.id)}
+                                                            disabled={inCompare}
+                                                            className="w-full rounded-lg border border-indigo-300 px-3 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-50 disabled:cursor-default disabled:border-slate-200 disabled:text-slate-400 disabled:hover:bg-transparent dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950/40 dark:disabled:border-slate-800 dark:disabled:text-slate-500"
+                                                        >
+                                                            {inCompare ? "В сравнении" : "Сравнить с рекомендованным"}
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => choose(product.id)}
+                                                        className="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+                                                    >
+                                                        Выбрать для расчёта
+                                                    </button>
+                                                </>
+                                            }
+                                        />
                                     );
                                 })}
                             </div>
