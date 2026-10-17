@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Wizard, type WizardStep } from "../components/Wizard.tsx";
 import type { ProjectFormData } from "../store/store";
 import {
+    DOCK_LAYOUTS,
     ECON_LIMITS,
     FLOOR_FLATNESS,
     WORK_MODES,
@@ -133,7 +134,19 @@ const buildSteps = (p: ProjectFormData, areaByDimensions: number): WizardStep<Ec
         description: "H–L. Планировка, энергия, системы учёта и горизонт расчёта",
         columns: 2,
         fields: [
-            { name: "routeLengthPerLine", label: "Маршрут отборщика на строку", unit: "м" },
+            {
+                name: "dockLayout",
+                label: "Расположение ворот приёмки и отгрузки",
+                type: "select",
+                hint: "от него зависит средний пробег робота, а значит и число роботов",
+            },
+            { name: "handlingSec", label: "Погрузка и выгрузка за цикл робота", unit: "с", hint: "по умолчанию 20 с" },
+            {
+                name: "routeLengthPerLine",
+                label: "Маршрут отборщика на строку",
+                unit: "м",
+                hint: "если заполнено — используется как пробег робота в одну сторону вместо расчёта по габаритам",
+            },
             { name: "conveyorLength", label: "Длина конвейерной системы", unit: "м" },
             { name: "powerAvailableKw", label: "Доступная мощность", unit: "кВт" },
             { name: "replacedEquipmentCost", label: "Затраты на заменяемое оборудование", unit: "₽" },
@@ -213,6 +226,8 @@ export function ProjectEconomics() {
                 getOptions={(name) =>
                     name === "workMode"
                         ? WORK_MODES
+                        : name === "dockLayout"
+                          ? DOCK_LAYOUTS
                         : name === "floorFlatness"
                           ? FLOOR_FLATNESS
                           : name === "rackSystemId"

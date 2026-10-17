@@ -11,7 +11,7 @@ export function DemoLock({ compact = false }: { compact?: boolean }) {
             </div>
             {!compact && (
                 <p className="mt-1 text-xs leading-snug text-slate-500 dark:text-slate-400">
-                    Это параметры типового склада 40 × 24 м. Пройдите расчёт до конца и посмотрите результат —
+                    Это параметры типового склада 48 × 30 м. Пройдите расчёт до конца и посмотрите результат —
                     чтобы ввести свой объект, нужна регистрация.
                 </p>
             )}

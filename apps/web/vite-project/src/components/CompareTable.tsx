@@ -78,6 +78,8 @@ const ROWS: Row[] = [
     { group: "Экономика", label: "OPEX в год", value: (_i, e) => (e ? mln(e.opex) : null), num: (_i, e) => e?.opex ?? null, best: "min" },
     { group: "Экономика", label: "Стоимость владения за горизонт", value: (_i, e) => (e ? mln(e.tco) : null), num: (_i, e) => e?.tco ?? null, best: "min" },
     { group: "Экономика", label: "Нужно роботов", value: (_i, e) => (e ? `${e.units} шт` : null), num: (_i, e) => e?.units ?? null, best: "min" },
+    // С учётом маршрута по складу, зарядки и коэффициента использования — по ней считается число роботов
+    { group: "Экономика", label: "Производительность в расчёте", value: (_i, e) => (e ? `${Math.round(e.effective)} ед/ч` : null), num: (_i, e) => e?.effective ?? null, best: "max" },
     { group: "Экономика", label: "Цена за единицу", value: (i) => (i.robot.price ? `${fmt(i.robot.price)} ₽` : null), num: (i) => i.robot.price || null, best: "min" },
 
     { group: "Характеристики", label: "Тип", value: (i) => i.robot.type },
@@ -86,7 +88,7 @@ const ROWS: Row[] = [
     { group: "Характеристики", label: "Скорость", value: (i) => `${i.robot.speedMps} м/с`, num: (i) => i.robot.speedMps, best: "max" },
     {
         group: "Характеристики",
-        label: "Производительность",
+        label: "Паспортная производительность",
         value: (i) => `${i.robot.throughputPerHour} ед/ч${i.robot.throughputSource === "specs" ? "" : " (типовая)"}`,
         num: (i) => i.robot.throughputPerHour,
         best: "max",

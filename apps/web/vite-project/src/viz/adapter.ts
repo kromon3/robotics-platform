@@ -9,6 +9,7 @@ import { rackSize } from "./core/catalog";
 import { minAisle } from "./core/rules";
 import { rackModuleCapacity } from "./core/layout";
 import { rackById } from "./rackCatalog";
+import { DOCK_LABEL, ROUTE_DEFAULTS, routeCycle, type DockLayout, type RouteCycle } from "./routeModel";
 import {
     DEFAULT_NORMS,
     SOURCE_LABEL,
@@ -115,11 +116,112 @@ export function toNorms(e?: EconNumeric, base: Norms = DEFAULT_NORMS, p?: Numeri
     };
 }
 
-const toRobotInput = (robot: VizRobot): RobotInput => ({
-    name: robot.name,
-    price: robot.price,
-    throughputPerHour: robot.throughputPerHour,
-});
+// ── Робот для экономики: производительность по модели маршрута ───────────
+
+/** Явные параметры маршрута; не заданы — берутся из формы экономики, затем значения по умолчанию */
+export type RouteOptions = {
+    dock?: DockLayout;
+    handlingSec?: number;
+    /** false — считать по паспортной производительности, как до модели маршрута */
+    enabled?: boolean;
+};
+
+/** Вход экономической модели плюс то, как получена производительность — для объяснения в отчёте */
+export type RoutedRobotInput = RobotInput & {
+    /** Расчёт маршрута; null — модель не применялась (стационарная система, нет габаритов или скорости) */
+    route: RouteCycle | null;
+    /** Производительность из ТТХ или типовая для класса, ед/ч */
+    passportPerHour: number;
+    /** Заявлена ли она производителем */
+    passportDeclared: boolean;
+    /** Откуда взято throughputPerHour */
+    throughputBasis: "route" | "passport";
+    dock: DockLayout;
+};
+
+/** Расположение ворот и время погрузки: явные параметры → форма экономики → значения по умолчанию */
+export function routeOptionsOf(econ?: Pick<EconNumeric, "dockLayout" | "handlingSec">, routeOpts?: RouteOptions) {
+    const dock: DockLayout = routeOpts?.dock ?? (econ?.dockLayout === "corner" || econ?.dockLayout === "center" ? econ.dockLayout : ROUTE_DEFAULTS.dock);
+    const fromForm = econ?.handlingSec && econ.handlingSec > 0 ? econ.handlingSec : undefined;
+    const handlingSec = routeOpts?.handlingSec ?? fromForm ?? ROUTE_DEFAULTS.handlingSec;
+    return { dock, handlingSec, enabled: routeOpts?.enabled ?? true };
+}
+
+/**
+ * Единственное место, где робот из каталога превращается во вход экономической модели.
+ * Им пользуются витрина (ranking.ts), отчёт (project-result.tsx) и схема (buildScenarios), поэтому
+ * число роботов везде одно и то же.
+ *
+ * Производительность = min(паспортная, если её заявил производитель; по маршруту).
+ * Если производитель не заявил — берётся маршрутная, типовая для класса больше не используется.
+ * Без параметров объекта, для стационарных систем и при нехватке данных — паспортная, как раньше.
+ */
+export function toRobotInput(robot: VizRobot, p?: NumericFormData, econ?: EconNumeric, routeOpts?: RouteOptions): RoutedRobotInput {
+    const opts = routeOptionsOf(econ, routeOpts);
+    const passport: RoutedRobotInput = {
+        name: robot.name,
+        price: robot.price,
+        throughputPerHour: robot.throughputPerHour,
+        route: null,
+        passportPerHour: robot.throughputPerHour,
+        passportDeclared: robot.throughputSource === "specs",
+        throughputBasis: "passport",
+        dock: opts.dock,
+    };
+    if (!p || !opts.enabled || robot.type === "ASRS") return passport;
+
+    const site = toSiteInput(p, econ);
+    const route = routeCycle({
+        widthM: p.width,
+        lengthM: p.length,
+        dock: opts.dock,
+        routeOverrideM: econ?.routeLengthPerLine || undefined,
+        speedMps: robot.speedMps,
+        handlingSec: opts.handlingSec,
+        runtimeH: robot.runtimeH,
+        chargeH: robot.chargeH,
+        hoursPerDay: site.shiftsPerDay * site.shiftHours,
+    });
+    if (!(route.perHour > 0)) return passport;
+
+    const declared = robot.throughputSource === "specs" && robot.throughputPerHour > 0;
+    const perHour = declared ? Math.min(robot.throughputPerHour, route.perHour) : route.perHour;
+    return {
+        ...passport,
+        throughputPerHour: +perHour.toFixed(1),
+        route,
+        throughputBasis: declared && robot.throughputPerHour <= route.perHour ? "passport" : "route",
+    };
+}
+
+/**
+ * Нормативы под робота: когда пробег и зарядка посчитаны явно, коэффициент использования
+ * описывает только трафик и простои — 0,85 вместо 0,7, иначе потери учитывались бы дважды.
+ * Если пользователь задал коэффициент сам (не значение по умолчанию), его не трогаем.
+ */
+export function normsFor(norms: Norms, robot: Pick<RoutedRobotInput, "route"> | RobotInput): Norms {
+    const routed = "route" in robot && robot.route !== null;
+    return routed && norms.utilization === DEFAULT_NORMS.utilization ? { ...norms, utilization: ROUTE_DEFAULTS.utilization } : norms;
+}
+
+const dec = (v: number, digits = 1) => v.toLocaleString("ru-RU", { maximumFractionDigits: digits });
+
+/** Текст блока «Маршрут и время цикла» — и для схемы, и для отчёта */
+export function routeExplanation(r: RoutedRobotInput, p: { width: number; length: number }, speedMps: number): string {
+    const route = r.route;
+    if (!route) return "Модель маршрута не применялась: стационарная система или не хватает габаритов объекта и скорости робота — используется паспортная производительность.";
+    const d = dec(route.oneWayM);
+    const where = route.overridden
+        ? `пробег в одну сторону задан в форме: ${d} м`
+        : `ворота ${DOCK_LABEL[r.dock]}, склад ${p.width} × ${p.length} м: d = (${r.dock === "corner" ? "W/2" : "W/4"} + L/2) × ${dec(route.detour, 2)} (обход рядов) = ${d} м`;
+    const avail = route.availability < 1 ? ` × доступность с учётом зарядки ${Math.round(route.availability * 100)}%` : "";
+    const passport = `${dec(r.passportPerHour)} ед/ч ${r.passportDeclared ? "по паспорту" : "типовых для класса"}`;
+    const basis =
+        r.throughputBasis === "passport"
+            ? `Паспортная производительность ${dec(r.passportPerHour)} ед/ч ниже маршрутной — в расчёт идёт паспортная.`
+            : `В расчёт идёт ${dec(r.throughputPerHour)} ед/ч вместо ${passport}; коэффициент использования описывает только трафик и простои.`;
+    return `Средний пробег: ${where}. Цикл T = 2d ÷ (скорость ${dec(speedMps, 2)} м/с × ${dec(route.speedFactor, 2)}) + погрузка и выгрузка ${dec(route.handlingSec)} с = ${Math.round(route.cycleSec)} с. Производительность = 3600 ÷ T${avail} = ${dec(route.perHour)} ед/ч. ${basis}`;
+}
 
 const fmt = (n: number) => Math.round(n).toLocaleString("ru-RU");
 
@@ -163,15 +265,16 @@ const itemsAssumption = (title: string, items: CostItem[]): { title: string; tex
         .join("; ") || "нет затрат по этой группе",
 });
 
-function assumptionsOf(e: ScenarioEconomics, n: Norms, robot: VizRobot, extra: { title: string; text: string }[]) {
+function assumptionsOf(e: ScenarioEconomics, n: Norms, robot: VizRobot, ri: RoutedRobotInput, p: NumericFormData, extra: { title: string; text: string }[]) {
     const zone = paybackZone(e.paybackYears);
     const bZone = budgetZone(e.budgetShare);
     const rZone = roiZone(e.roi);
     return [
         {
             title: "Количество роботов",
-            text: `Пиковая потребность ${e.peakDemand.toFixed(1)} ед/ч ÷ (производительность ${robot.throughputPerHour} ед/ч × коэффициент использования ${n.utilization}) × (1 + резерв ${n.capacityReserve * 100}%) = ${e.units}, округление вверх.`,
+            text: `Пиковая потребность ${e.peakDemand.toFixed(1)} ед/ч ÷ (производительность ${ri.throughputPerHour} ед/ч × коэффициент использования ${n.utilization}) × (1 + резерв ${n.capacityReserve * 100}%) = ${e.units}, округление вверх.`,
         },
+        { title: "Маршрут и время цикла", text: routeExplanation(ri, p, robot.speedMps) },
         {
             title: "Замещение персонала",
             text: `Эффективная производительность робота ${e.effective.toFixed(1)} ед/ч ÷ выработка оператора ${n.workerOutputPerHour} ед/ч = ${(e.effective / n.workerOutputPerHour).toFixed(2)} чел. на робота; всего замещается ${e.replacedWorkers.toFixed(1)} чел. Экономия ФОТ = ${fmt(e.laborSaving)} ₽/год, ФОТ оставшихся ${fmt(e.remainingLabor)} ₽/год остаётся в расчёте (с начислениями ${n.payrollTax}).`,
@@ -196,7 +299,7 @@ function assumptionsOf(e: ScenarioEconomics, n: Norms, robot: VizRobot, extra: {
     ];
 }
 
-const kpiSet = (e: ScenarioEconomics, n: Norms) => [
+const kpiSet = (e: ScenarioEconomics, n: Norms, route: RouteCycle | null) => [
     { id: "capex", label: "CAPEX", value: Math.round(e.capex), unit: "₽" },
     { id: "opex", label: "OPEX / год", value: Math.round(e.opex), unit: "₽" },
     { id: "effect", label: "Годовой эффект", value: Math.round(e.annualEffect), unit: "₽" },
@@ -204,6 +307,12 @@ const kpiSet = (e: ScenarioEconomics, n: Norms) => [
     { id: "roi", label: `ROI за ${n.horizonYears} лет`, value: e.roi ?? "—", unit: e.roi === null ? "" : "%" },
     { id: "tco", label: `TCO за ${n.horizonYears} лет`, value: Math.round(e.tco), unit: "₽" },
     { id: "units", label: "Роботов", value: e.units, unit: "шт" },
+    ...(route
+        ? [
+              { id: "route", label: "Средний пробег, м", value: +route.oneWayM.toFixed(1), unit: "" },
+              { id: "cycle", label: "Цикл, с", value: Math.round(route.cycleSec), unit: "" },
+          ]
+        : []),
     ...(e.budgetShare !== null ? [{ id: "budget", label: "CAPEX / бюджет", value: Math.round(e.budgetShare * 100), unit: "%" }] : []),
 ];
 
@@ -213,10 +322,13 @@ function buildResult(
     kind: "buy" | "raas",
     norms: Norms,
     econ?: EconNumeric,
+    routeOpts?: RouteOptions,
     horizonMin = 20,
 ) {
     const site = toSiteInput(p, econ);
-    const e = computeScenario(kind, site, toRobotInput(robot), norms);
+    const ri = toRobotInput(robot, p, econ, routeOpts);
+    norms = normsFor(norms, ri);
+    const e = computeScenario(kind, site, ri, norms);
     const cargo = buildCargo(p);
     const isStat = robot.type === "ASRS";
     const aisle = isStat ? p.aisleWidth : Math.max(p.aisleWidth, minAisle(robot, cargo));
@@ -251,7 +363,7 @@ function buildResult(
         : [itemsAssumption("CAPEX по статьям", e.capexItems), itemsAssumption("OPEX по статьям", e.opexItems)];
 
     const assumptions = [
-        ...assumptionsOf(e, norms, robot, extra),
+        ...assumptionsOf(e, norms, robot, ri, p, extra),
         ...(aisle > p.aisleWidth ? [{ title: "Проход", text: `Ширина прохода увеличена с ${p.aisleWidth} до ${aisle} м: этого требует разворот ${robot.type} с грузом.` }] : []),
         ...(rackSys
             ? [{
@@ -274,7 +386,7 @@ function buildResult(
             ? Array.from({ length: drawUnits }, (_, i) => ({ id: `st${i + 1}`, name: robot.name, w: robot.w, l: robot.l, throughputPerHour: robot.throughputPerHour, speedMps: robot.speedMps }))
             : [],
         simulation: { horizonMin, tasksPerRobot, requiredOrdersPerHour: +(e.peakDemand * drawShare).toFixed(1), initialFillPct: 35, chargeEveryOrders: [5, 10], chargeSec: [15, 40] },
-        kpis: kpiSet(e, norms),
+        kpis: kpiSet(e, norms, ri.route),
         charts: [
             {
                 id: "cost",
@@ -306,9 +418,10 @@ function buildResult(
     };
 }
 
-function buildBaseline(p: NumericFormData, robot: VizRobot, norms: Norms, econ?: EconNumeric) {
+function buildBaseline(p: NumericFormData, robot: VizRobot, norms: Norms, econ?: EconNumeric, routeOpts?: RouteOptions) {
     const site = toSiteInput(p, econ);
-    const e = computeScenario("baseline", site, toRobotInput(robot), norms);
+    const ri = toRobotInput(robot, p, econ, routeOpts);
+    const e = computeScenario("baseline", site, ri, normsFor(norms, ri));
     return {
         version: 1,
         meta: meta("Без роботизации (текущий процесс)", "baseline"),
@@ -342,12 +455,13 @@ export function buildScenarios(
     robot: VizRobot,
     econ?: EconNumeric,
     overrides?: Partial<Norms>,
+    routeOpts?: RouteOptions,
 ) {
     const norms: Norms = { ...toNorms(econ, DEFAULT_NORMS, p), ...overrides };
     return [
-        buildBaseline(p, robot, norms, econ),
-        buildResult(p, robot, "buy", norms, econ),
-        buildResult(p, robot, "raas", norms, econ),
+        buildBaseline(p, robot, norms, econ, routeOpts),
+        buildResult(p, robot, "buy", norms, econ, routeOpts),
+        buildResult(p, robot, "raas", norms, econ, routeOpts),
     ];
 }
 

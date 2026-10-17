@@ -13,6 +13,12 @@ import {
     type SiteInput,
 } from "./economics";
 import type { VizRobot } from "./robotSpecs";
+import { normsFor, toRobotInput, type RouteOptions } from "./adapter";
+import type { NumericFormData } from "../store/store";
+import type { EconNumeric } from "../store/econStore";
+
+/** Параметры объекта для модели маршрута: без них производительность паспортная, как раньше */
+export type RankContext = { form: NumericFormData; econ?: EconNumeric; routeOpts?: RouteOptions };
 
 export type RankInput = {
     id: string;
@@ -89,6 +95,8 @@ const fmt = (n: number) => Math.round(n).toLocaleString("ru-RU");
 /**
  * Считает оценку каждому решению и раскладку по факторам.
  * cargoMassKg — масса грузовой единицы, aisleWidth — ширина прохода на объекте.
+ * ctx — параметры объекта: с ними производительность считается по модели маршрута,
+ * тем же toRobotInput, что и в отчёте, поэтому число роботов на витрине и в отчёте совпадает.
  */
 export function rankOffers<T extends RankInput>(
     items: T[],
@@ -96,14 +104,16 @@ export function rankOffers<T extends RankInput>(
     norms: Norms,
     cargoMassKg: number,
     aisleWidth: number,
+    ctx?: RankContext,
 ): Ranked<T>[] {
     if (items.length === 0) return [];
 
     // Экономику считаем для каждого подходящего решения, а не только для выбранного:
     // платформа должна сама предлагать выгодный вариант, а не список совместимых (ТЗ 3.4.5).
-    const metrics = items.map((i) =>
-        computeScenario("buy", site, { name: i.robot.name, price: i.robot.price, throughputPerHour: i.robot.throughputPerHour }, norms),
-    );
+    const metrics = items.map((i) => {
+        const robot = toRobotInput(i.robot, ctx?.form, ctx?.econ, ctx?.routeOpts);
+        return computeScenario("buy", site, robot, normsFor(norms, robot));
+    });
 
     const paybacks = metrics.map((m) => m.paybackYears).filter((v): v is number => v !== null);
     const bestPayback = paybacks.length ? Math.min(...paybacks) : null;

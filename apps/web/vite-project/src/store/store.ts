@@ -111,15 +111,16 @@ const DEFAULTS: ProjectFormData = {
     aClassShare: "",
 };
 
-// Демо-склад для показа: средний распределительный склад с коробочным отбором.
-// Значения согласованы с тестовым стендом визуализации (DEFAULT_PARAMS в warehouse-viz).
+// Демо-склад для показа: средний распределительный склад с коробочным отбором, 48 × 30 м,
+// круглосуточно в две смены по 11 ч, 6000 строк отбора в сутки. С моделью маршрута при воротах
+// в центре стены роботизация окупается примерно за 3 года, при воротах в углу — заметно дольше.
 export const EXAMPLE: ProjectFormData = {
     rackType: "shelf",
     cargoType: "box",
-    width: 40,
-    length: 24,
+    width: 48,
+    length: 30,
     aisleWidth: 2,
-    workHours: 16,
+    workHours: 22,
     shelfCapacity: 12,
     palletPlaces: 200,
     pallet: { L: 1200, W: 800, H: 1500 },
@@ -129,8 +130,8 @@ export const EXAMPLE: ProjectFormData = {
     oversizeShare: 0,
     receivePalletsDay: 120,
     shipPalletsDay: 120,
-    pickLinesDay: 4800,
-    pickPiecesDay: 7200,
+    pickLinesDay: 6000,
+    pickPiecesDay: 9000,
     piecePickShare: 60,
     skuActive: 800,
     aClassShare: 20,

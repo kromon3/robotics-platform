@@ -121,6 +121,8 @@ export function ProjectOffers() {
             hasEcon ? toNorms(toEconNumeric(econ), DEFAULT_NORMS, p) : DEFAULT_NORMS,
             cargoMass,
             p.aisleWidth,
+            // Модель маршрута: габариты объекта, расположение ворот и время погрузки — те же, что в отчёте
+            { form: p, econ: hasEcon ? toEconNumeric(econ) : undefined, routeOpts: { dock: econ.dockLayout, handlingSec: econ.handlingSec || undefined } },
         );
     }, [fit, p, econ, hasEcon]);
 

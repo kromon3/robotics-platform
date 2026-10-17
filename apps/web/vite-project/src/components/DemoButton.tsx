@@ -25,7 +25,7 @@ export function DemoButton({ className = "" }: { className?: string }) {
                 <span>
                     <span className="block text-base font-semibold text-white">Посмотреть демо без регистрации</span>
                     <span className="mt-0.5 block text-xs text-indigo-100">
-                        Готовый склад 40 × 24 м: подбор решения, экономика и имитация за полминуты
+                        Готовый склад 48 × 30 м: подбор решения, экономика и имитация за полминуты
                     </span>
                 </span>
                 <span className="shrink-0 text-2xl text-white transition-transform group-hover:translate-x-1 motion-reduce:transform-none">

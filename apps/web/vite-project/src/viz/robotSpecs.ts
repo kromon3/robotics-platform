@@ -19,6 +19,8 @@ export type VizRobot = {
     liftHeightMm?: number; // высота подъёма груза
     liftResidualKg?: number; // грузоподъёмность на максимальной высоте
     gripper?: string; // тип захвата: «Вилы», «Подъёмный стол», …
+    runtimeH?: number; // работа от одной зарядки, ч — для доступности в модели маршрута
+    chargeH?: number; // время зарядки, ч
     /** Откуда производительность: заявлена производителем или типовая для класса */
     throughputSource: "specs" | "type-default";
     /** Оговорка поставщика данных к цене или ТТХ */
@@ -150,6 +152,11 @@ export function toVizRobot(p: Product): VizRobot {
     const residual = num(s.lift_residual_payload_kg);
     if (residual) robot.liftResidualKg = residual;
     if (typeof s.gripper === "string" && s.gripper) robot.gripper = s.gripper;
+    // Автономность: из неё модель маршрута считает долю времени на зарядке (src/viz/routeModel.ts)
+    const runtime = num(s.runtime_h);
+    if (runtime) robot.runtimeH = runtime;
+    const charge = num(s.charge_h);
+    if (charge) robot.chargeH = charge;
     // Примечание поставщика данных: чаще всего оговорка к цене («оценка landed РФ»)
     if (typeof s.note === "string" && s.note.trim()) robot.note = s.note.trim();
 
