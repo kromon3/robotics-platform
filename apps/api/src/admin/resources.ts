@@ -175,6 +175,78 @@ export function adminResources(db: DatabaseMetadata): ResourceWithOptions[] {
       },
     },
     {
+      resource: db.table('quote_request'),
+      options: {
+        id: 'quote_request',
+        navigation: { name: 'Запросы КП', icon: 'Mail' },
+        // Запрос создаёт снабженец на сайте; в админке — просмотр и смена статуса
+        actions: { new: { isAccessible: false } },
+        listProperties: [
+          'number',
+          'status',
+          'company',
+          'contact_name',
+          'email',
+          'delivery_region',
+          'created_at',
+        ],
+        editProperties: ['status'],
+        filterProperties: ['status', 'company', 'email', 'created_at'],
+        properties: {
+          id: { ...READONLY, position: 0 },
+          number: { ...READONLY, isTitle: true, position: 1 },
+          status: {
+            availableValues: [
+              { value: 'NEW', label: 'Новый' },
+              { value: 'SENT', label: 'Передан поставщикам' },
+              { value: 'ANSWERED', label: 'Есть ответ' },
+              { value: 'CLOSED', label: 'Закрыт' },
+            ],
+          },
+          comment: { type: 'textarea' },
+          ...timestamps(),
+        },
+      },
+    },
+    {
+      resource: db.table('quote_request_supplier'),
+      options: {
+        id: 'quote_request_supplier',
+        navigation: { name: 'Запросы КП', icon: 'Truck' },
+        actions: { new: { isAccessible: false } },
+        listProperties: ['request_id', 'company_name', 'status', 'sent_at'],
+        editProperties: ['status', 'sent_at'],
+        properties: {
+          id: { ...READONLY, position: 0 },
+          company_name: { isTitle: true, position: 1 },
+          ...timestamps(),
+        },
+      },
+    },
+    {
+      resource: db.table('quote_request_item'),
+      options: {
+        id: 'quote_request_item',
+        navigation: { name: 'Запросы КП', icon: 'List' },
+        // Позиции — снимок каталога на момент запроса, их не правят
+        actions: {
+          new: { isAccessible: false },
+          edit: { isAccessible: false },
+        },
+        listProperties: [
+          'supplier_id',
+          'product_name',
+          'quantity',
+          'unit_price',
+        ],
+        properties: {
+          id: { ...READONLY, position: 0 },
+          product_name: { isTitle: true, position: 1 },
+          created_at: { ...READONLY, position: 100 },
+        },
+      },
+    },
+    {
       resource: db.table('User'),
       options: {
         id: 'User',

@@ -8,6 +8,7 @@ import { RoleModule } from './role/role.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { ProjectsModule } from './projects/projects.module';
+import { QuoteRequestsModule } from './quote-requests/quote-requests.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -20,6 +21,7 @@ import { ProjectsModule } from './projects/projects.module';
     RoleModule,
     CatalogModule,
     ProjectsModule,
+    QuoteRequestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

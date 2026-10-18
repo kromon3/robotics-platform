@@ -319,11 +319,20 @@ export function RobotDetail() {
                             )}
                         </dl>
 
+<Link
+                            to={`/robots/quote?ids=${encodeURIComponent(robot.id)}&source=detail`}
+                            className="mt-5 block w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+                        >
+                            Запросить КП
+                        </Link>
+                        <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
+                            Поставщик пришлёт цену с доставкой и внедрением — без регистрации
+                        </p>
                         <button
                             type="button"
                             disabled
                             title="Появится вместе с визардом расчёта"
-                            className="mt-5 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+                            className="mt-3 w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-200"
                         >
                             Добавить в расчёт
                         </button>

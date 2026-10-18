@@ -9,6 +9,15 @@ async function bootstrap() {
   // REST API
   const port = process.env.PORT ?? 3000;
   const appRest = await NestFactory.create<NestExpressApplication>(AppModule);
+  // За nginx реальный IP клиента приходит в X-Forwarded-For. Без trust proxy лимит запросов КП
+  // (src/quote-requests/rate-limiter.ts) считался бы на один адрес прокси для всех пользователей.
+  // Включается переменной TRUST_PROXY (число доверенных прокси), см. docker-compose.yml.
+  if (process.env.TRUST_PROXY) {
+    appRest.set(
+      'trust proxy',
+      Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY,
+    );
+  }
 
   // Фото роботов из каталога ТТХ: prisma/data/photos/R-101.webp -> /photos/R-101.webp
   // В dist лежит рядом (prisma копируется в образ), в dev — на два уровня выше от src

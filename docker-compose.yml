@@ -31,6 +31,8 @@ services:
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@robotics.local}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin12345}
       SEED_MOCK_PASSWORD: ${SEED_MOCK_PASSWORD:-password123}
+      # API за nginx (web): клиентский IP — из X-Forwarded-For, для лимита запросов КП
+      TRUST_PROXY: 1
     depends_on:
       db:
         condition: service_healthy

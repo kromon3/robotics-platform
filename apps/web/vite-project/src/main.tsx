@@ -11,6 +11,7 @@ import {Toaster} from "sonner";
 import {Robots} from "./pages/robot.tsx";
 import {RobotDetail} from "./pages/robot-detail.tsx";
 import {RobotCompare} from "./pages/robot-compare.tsx";
+import {RobotQuote} from "./pages/robot-quote.tsx";
 import {Project} from "./pages/project.tsx";
 import {ProjectStart} from "./pages/project-start.tsx";
 import {ObjectTypeSoon} from "./pages/object-type-soon.tsx";
@@ -35,6 +36,7 @@ createRoot(document.getElementById('root')!).render(
                   <Route path="/projects/result" element={<ProjectResult />} />
                   <Route path="/robots" element={<Robots />} />
                   <Route path="/robots/compare" element={<RobotCompare />} />
+                  <Route path="/robots/quote" element={<RobotQuote />} />
                   <Route path="/robots/:id" element={<RobotDetail />} />
                   <Route path="/calculations" element={<Calculations />} />
                   <Route path="/settings" element={<Placeholder title="Настройки" />} />
