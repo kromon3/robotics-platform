@@ -41,8 +41,10 @@ class InnConstraint implements ValidatorConstraintInterface {
   validate(value: unknown) {
     return typeof value === 'string' && isValidInn(value);
   }
-  defaultMessage() {
-    return 'ИНН должен состоять из 10 или 12 цифр с верной контрольной суммой';
+  defaultMessage(args: { value: unknown }) {
+    return /^\d{10}$|^\d{12}$/.test(String(args.value))
+      ? 'Такого ИНН не существует: контрольные цифры не сходятся'
+      : 'ИНН — это 10 цифр у организации или 12 у ИП, без пробелов и букв';
   }
 }
 

@@ -169,7 +169,7 @@ export function RobotQuote() {
                 </Link>
                 <h2 className="mt-2 text-xl font-semibold tracking-tight">Запрос коммерческого предложения</h2>
                 <p className="mt-2 max-w-3xl text-sm text-slate-500 dark:text-slate-400">
-                    Укажите, сколько решений нужно, куда и когда поставить. Платформа передаст запрос поставщикам — каждому только его
+                    Укажите, сколько решений нужно, куда и когда поставить. Запрос разбивается по поставщикам — каждому уходит только его
                     позиции и ваши контакты. Регистрация не нужна.
                 </p>
             </div>
@@ -577,9 +577,10 @@ function QuoteSuccess({ receipt, backTo }: { receipt: QuoteReceipt; backTo: stri
                     № {formatQuoteNumber(receipt.displayNumber)}
                 </h2>
                 <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
-                    Платформа передаст запрос поставщикам: {receipt.suppliers.length}{" "}
-                    {plural(receipt.suppliers.length, ["поставщик", "поставщика", "поставщиков"])}, {positionsLabel(total)}. Ответы придут
-                    на <span className="font-medium">{receipt.email}</span>. Сохраните номер — по нему поставщик и команда платформы найдут
+                    Запрос зарегистрирован и разбит на {receipt.suppliers.length}{" "}
+                    {plural(receipt.suppliers.length, ["часть", "части", "частей"])} по числу поставщиков, {positionsLabel(total)}.
+                    Команда платформы передаст каждую часть своему поставщику; ответы придут на{" "}
+                    <span className="font-medium">{receipt.email}</span>. Сохраните номер — по нему поставщик и команда платформы найдут
                     ваш запрос.
                 </p>
             </section>

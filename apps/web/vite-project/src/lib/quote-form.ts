@@ -118,7 +118,11 @@ export function validateQuoteForm(values: QuoteFormValues, lines: QuoteLine[]): 
     if (!values.email.trim()) errors.email = "Укажите email — на него придёт ответ";
     else if (!EMAIL.test(values.email.trim())) errors.email = "Проверьте email: например, zakupki@company.ru";
     if (values.phone.trim() && !PHONE.test(values.phone.trim())) errors.phone = "Проверьте телефон: цифры, пробелы, скобки, дефис и «+»";
-    if (values.inn.trim() && !isValidInn(values.inn.trim())) errors.inn = "ИНН — 10 цифр у организации или 12 у ИП, проверьте цифры";
+    if (values.inn.trim()) {
+        const inn = values.inn.trim();
+        if (!/^\d{10}$|^\d{12}$/.test(inn)) errors.inn = "ИНН — это 10 цифр у организации или 12 у ИП, без пробелов и букв";
+        else if (!isValidInn(inn)) errors.inn = "Такого ИНН не существует: последние цифры — контрольные, они не сходятся с остальными";
+    }
     if (!values.deliveryRegion.trim()) errors.deliveryRegion = "Укажите регион или город поставки";
     if (!values.timeframe) errors.timeframe = "Выберите желаемый срок";
     if (values.comment.length > QUOTE_COMMENT_MAX) errors.comment = `Не больше ${QUOTE_COMMENT_MAX} символов`;
