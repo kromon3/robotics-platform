@@ -2,41 +2,19 @@
 import { Link, Navigate, useNavigate } from "react-router";
 import axios from "axios";
 import { RobotCard } from "../components/RobotCard.tsx";
-import type { Product, ProductsResponse } from "../api/catalog.ts";
 import { CARGO_TYPES, RACK_TYPES, getInvalidFields, getMissingFields, toNumericFormData, useProjectStore } from "../store/store";
-import { toVizRobot, type VizRobot } from "../viz/robotSpecs";
-import { checkCompat, minAisle } from "../viz/core/rules";
-import { checkLift } from "../viz/liftRules";
 import { m, rackTier } from "../viz/rackSpecs";
 import { CompareTable } from "../components/CompareTable.tsx";
 import { CompareBar } from "../components/CompareBar.tsx";
 import { COMPARE_LIMIT, formatNumber, toggleCompareId } from "../lib/compare";
-import { rankOffers } from "../viz/ranking";
 import { RecommendedSolution } from "../components/RecommendedSolution.tsx";
-import { DEFAULT_NORMS } from "../viz/economics";
 import { toEconNumeric, useEconStore } from "../store/econStore";
-import { toNorms, toSiteInput } from "../viz/adapter";
+import { fetchWarehouseProducts, rankFit, splitOffers, type Offer } from "../lib/selection";
+import { DEFAULT_NORMS } from "../viz/economics";
+import { toNorms } from "../viz/adapter";
+import type { Product } from "../api/catalog.ts";
 import { toast } from "sonner";
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-// Кандидаты — складские сценарии каталога организатора. Дальше их фильтруют правила совместимости.
-const WAREHOUSE_SCENARIOS = ["Внутрискладская логистика", "Сортировка грузов", "Внутрипроизводственная логистика"];
-
-async function fetchWarehouseProducts(signal: AbortSignal): Promise<Product[]> {
-    const pages = await Promise.all(
-        WAREHOUSE_SCENARIOS.map((scenario) =>
-            axios
-                .get<ProductsResponse>(`${API_URL}/catalog/products`, { params: { scenario, limit: 100 }, signal })
-                .then((r) => r.data.items),
-        ),
-    );
-    const byId = new Map<string, Product>();
-    for (const p of pages.flat()) byId.set(p.id, p);
-    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, "ru"));
-}
-
-type Offer = { product: Product; robot: VizRobot; reasons: string[]; minAisle: number };
 
 export function ProjectOffers() {
     const navigate = useNavigate();
@@ -67,57 +45,22 @@ export function ProjectOffers() {
 
     const p = useMemo(() => toNumericFormData(formData), [formData]);
 
-    // Правила совместимости робот ↔ стеллаж ↔ груз (из warehouse-viz/rules.js) + грузоподъёмность + проход.
-    // reasons пустой — подходит; иначе — объяснение, почему исключён (ТЗ п. 3.4.2).
-    const { fit, excluded } = useMemo(() => {
-        if (!items) return { fit: [] as Offer[], excluded: [] as Offer[] };
-        const cargo =
-            p.cargoType === "pallet"
-                ? { type: "pallet", unit: { l: p.pallet.L / 1000, w: p.pallet.W / 1000, h: p.pallet.H / 1000, massKg: p.palletMass }, oversizeShare: p.oversizeShare / 100 }
-                : p.cargoType === "long"
-                  ? { type: "long", unit: { l: 6, w: 0.6, h: 0.4, massKg: Math.max(p.skuMass, 150) }, oversizeShare: p.oversizeShare / 100 }
-                  : { type: "box", unit: { l: p.sku.L / 1000, w: p.sku.W / 1000, h: p.sku.H / 1000, massKg: p.skuMass }, oversizeShare: p.oversizeShare / 100 };
+    // Правила совместимости робот ↔ стеллаж ↔ груз + грузоподъёмность, проход и высота подъёма (ТЗ п. 3.4.2)
+    const { fit, excluded } = useMemo(
+        () => (items ? splitOffers(items, p) : { fit: [] as Offer[], excluded: [] as Offer[] }),
+        [items, p],
+    );
 
-        const offers: Offer[] = items.map((product) => {
-            const robot = toVizRobot(product);
-            const reasons: string[] = product.type === "software"
-                ? ["Программное обеспечение, а не робот — учитывается отдельно"]
-                : checkCompat(robot, p.rackType, cargo);
-            const aisle = robot.type === "ASRS" ? 0 : minAisle(robot, cargo);
-            if (aisle > p.aisleWidth + 0.5)
-                reasons.push(`Нужен проход не уже ${aisle} м, у вас ${p.aisleWidth} м`);
-            // Паспортная высота подъёма против высоты верхнего яруса выбранного стеллажа
-            if (product.type !== "software")
-                reasons.push(...checkLift(robot, p.rackType, p.cargoType, cargo.unit.massKg));
-            return { product, robot, reasons, minAisle: aisle };
-        });
-        return {
-            fit: offers.filter((o) => o.reasons.length === 0),
-            excluded: offers.filter((o) => o.reasons.length > 0),
-        };
-    }, [items, p]);
-
-    // Ранжирование подходящих решений с раскладкой по факторам (ТЗ 3.4.5)
-    const ranked = useMemo(() => {
-        const cargoMass = p.cargoType === "pallet" ? p.palletMass : p.cargoType === "long" ? Math.max(p.skuMass, 150) : p.skuMass;
-        return rankOffers(
-            fit.map((o) => ({
-                id: o.product.id,
-                robot: o.robot,
-                minAisle: o.minAisle,
-                status: o.product.status,
-                ugt: o.product.ugt,
-                verified: o.product.verified,
-                offer: o,
-            })),
-            toSiteInput(p, hasEcon ? toEconNumeric(econ) : undefined),
-            hasEcon ? toNorms(toEconNumeric(econ), DEFAULT_NORMS, p) : DEFAULT_NORMS,
-            cargoMass,
-            p.aisleWidth,
-            // Модель маршрута: габариты объекта, расположение ворот и время погрузки — те же, что в отчёте
-            { form: p, econ: hasEcon ? toEconNumeric(econ) : undefined, routeOpts: { dock: econ.dockLayout, handlingSec: econ.handlingSec || undefined } },
-        );
-    }, [fit, p, econ, hasEcon]);
+    // Ранжирование подходящих решений с раскладкой по факторам (ТЗ 3.4.5).
+    // Ворота и время погрузки — те же, что в отчёте: число роботов совпадает на всех экранах
+    const ranked = useMemo(
+        () =>
+            rankFit(fit, p, hasEcon ? toEconNumeric(econ) : undefined, {
+                dock: econ.dockLayout,
+                handlingSec: econ.handlingSec || undefined,
+            }),
+        [fit, p, econ, hasEcon],
+    );
 
     if (!ready) return <Navigate to="/projects/warehouse" replace />;
 

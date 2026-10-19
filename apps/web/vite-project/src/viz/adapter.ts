@@ -34,7 +34,8 @@ export const VIZ_LIMITS = { width: 200, length: 120, robots: 24 } as const;
 
 type CargoUnit = { l: number; w: number; h: number; massKg: number };
 
-function buildCargo(p: NumericFormData) {
+/** Груз объекта в терминах правил совместимости и схемы: метры, доля негабарита 0…1 */
+export function buildCargo(p: NumericFormData) {
     const share = p.oversizeShare / 100;
     // Форма хранит мм, контракт ждёт метры
     if (p.cargoType === "pallet")
