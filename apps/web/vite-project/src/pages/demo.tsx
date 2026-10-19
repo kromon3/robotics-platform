@@ -163,6 +163,9 @@ function DemoWorkspace({ demoCase, items }: { demoCase: DemoCase; items: Product
         const routeOpts = { dock: econ.dockLayout || undefined, handlingSec: econ.handlingSec || undefined };
         const { fit } = splitOffers(items, p);
         const ranked = rankFit(fit, p, e, routeOpts);
+        // Бюджетный коридор и норма доходности (viz/investmentLimits.ts) здесь намеренно не применяются:
+        // на демо-экране их нечем задать, и отсев по невидимому условию выглядел бы как ошибка подбора.
+        // Эти ограничения — часть полного расчёта, где пользователь сам вводит бюджет и требуемый срок
         const best = ranked[0];
         if (!best) return { kind: "empty" as const, fitCount: 0 };
 

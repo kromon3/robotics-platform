@@ -7,6 +7,7 @@ import { isAuthenticated, projectsApi } from "../api/projects.ts";
 import { computeScenario } from "../viz/economics";
 import { getInvalidFields, getMissingFields, toNumericFormData, useProjectStore } from "../store/store";
 import { toEconNumeric, useEconStore } from "../store/econStore";
+import { toLimits } from "../viz/investmentLimits";
 import { toVizRobot } from "../viz/robotSpecs";
 import { MODEL_VERSION, buildScenarios, normsFor, toNorms, toRobotInput, toSiteInput, type RouteOptions } from "../viz/adapter";
 import type { DockLayout } from "../viz/routeModel";
@@ -63,6 +64,12 @@ export function ProjectResult() {
 
     // Расположение ворот и время погрузки берём из формы экономики даже без остальных её данных:
     // переключатель в отчёте должен работать и на значениях демо-склада
+    // Инвестиционный коридор — из сырой формы: пустое поле означает «не ограничиваю»,
+    // а toEconNumeric превратил бы его в 0 и сделал бы требованием
+    const limits = useMemo(
+        () => toLimits({ budget: econ.budget, targetPaybackYears: econ.targetPaybackYears, minRoiPct: econ.minRoiPct }),
+        [econ.budget, econ.targetPaybackYears, econ.minRoiPct],
+    );
     const dockLayout: DockLayout = econ.dockLayout === "corner" ? "corner" : "center";
     const handlingSec = econ.handlingSec || undefined;
     const routeOpts = useMemo<RouteOptions>(() => ({ dock: dockLayout, handlingSec }), [dockLayout, handlingSec]);
@@ -242,6 +249,7 @@ export function ProjectResult() {
                     robot={economics.robot}
                     norms={economics.norms}
                     meta={reportMeta}
+                    limits={limits}
                     onInputsChange={setShown}
                     placement={
                         economics.robot.route

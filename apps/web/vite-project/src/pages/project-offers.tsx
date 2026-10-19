@@ -12,6 +12,7 @@ import { toEconNumeric, useEconStore } from "../store/econStore";
 import { fetchWarehouseProducts, rankFit, splitOffers, type Offer } from "../lib/selection";
 import { DEFAULT_NORMS } from "../viz/economics";
 import { toNorms } from "../viz/adapter";
+import { limitsSummary, splitByLimits, toLimits, type LimitBreach } from "../viz/investmentLimits";
 import type { Product } from "../api/catalog.ts";
 import { toast } from "sonner";
 
@@ -23,6 +24,7 @@ export function ProjectOffers() {
     const [items, setItems] = useState<Product[] | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [showExcluded, setShowExcluded] = useState(false);
+    const [showBeyond, setShowBeyond] = useState(false);
     const [compareIds, setCompareIds] = useState<string[]>([]);
     const econ = useEconStore((s) => s.econ);
     const hasEcon = Boolean(econ.workMode);
@@ -62,6 +64,19 @@ export function ProjectOffers() {
         [fit, p, econ, hasEcon],
     );
 
+    // Инвестиционный коридор заказчика: бюджет и норма доходности (ТЗ 3.4.5, 3.5.7).
+    // Берём из сырой формы, а не из toEconNumeric: там пустое поле превращается в 0,
+    // и «не ограничиваю ROI» стало бы требованием «ROI не ниже 0%»
+    const limits = useMemo(
+        () =>
+            hasEcon
+                ? toLimits({ budget: econ.budget, targetPaybackYears: econ.targetPaybackYears, minRoiPct: econ.minRoiPct })
+                : toLimits({}),
+        [econ.budget, econ.targetPaybackYears, econ.minRoiPct, hasEcon],
+    );
+    // Ограничения ничего не удаляют: решения вне коридора уходят в отдельный список с объяснением
+    const { within, beyond } = useMemo(() => splitByLimits(ranked, limits), [ranked, limits]);
+
     if (!ready) return <Navigate to="/projects/warehouse" replace />;
 
     const rackLabel = RACK_TYPES.find((r) => r.value === p.rackType)?.label ?? "";
@@ -84,8 +99,15 @@ export function ProjectOffers() {
         navigate("/projects/economics");
     };
 
-    const best = ranked[0] ?? null;
-    const rest = best ? ranked.slice(1) : ranked;
+    // Коридор пуст — рекомендуем ближайшее к нему решение и прямо говорим, чего не хватило:
+    // пустой экран вместо ответа хуже, чем ответ с оговоркой
+    const noneWithin = within.length === 0 && beyond.length > 0;
+    const best = within[0] ?? beyond[0]?.ranked ?? null;
+    const bestBreaches: LimitBreach[] = noneWithin ? (beyond[0]?.breaches ?? []) : [];
+    const rest = within.length > 0 ? within.slice(1) : [];
+    // Первое решение показано как рекомендация — в списке «вне коридора» его не повторяем
+    const beyondRest = noneWithin ? beyond.slice(1) : beyond;
+    const limitsNote = limitsSummary(limits);
 
     // Сравнение «это решение против рекомендованного»: ставим обе колонки и прокручиваем к таблице
     const compareWithBest = (id: string) => {
@@ -163,6 +185,26 @@ export function ProjectOffers() {
                 onRemove={toggleCompare}
             />
 
+            {items && noneWithin && (
+                <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 dark:border-amber-900 dark:bg-amber-950/40">
+                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                        Ни одно решение не укладывается в ваши ограничения
+                    </p>
+                    <p className="mt-1 text-sm text-amber-900 dark:text-amber-200">
+                        Задано: {limitsNote}. Ниже — ближайшее к вашим условиям решение; чего не хватает:
+                    </p>
+                    <ul className="mt-2 space-y-1 text-sm text-amber-900 dark:text-amber-200">
+                        {bestBreaches.map((b) => (
+                            <li key={b.key}>— {b.label}: {b.note}</li>
+                        ))}
+                    </ul>
+                    <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">
+                        Поднимите бюджет или смягчите норму доходности в экономической форме — либо пересмотрите
+                        параметры объекта: число роботов и разовые вложения зависят от объёма и площади.
+                    </p>
+                </div>
+            )}
+
             {items && best && (
                 <RecommendedSolution
                     product={best.item.offer.product}
@@ -180,11 +222,22 @@ export function ProjectOffers() {
                 <>
                     <section ref={othersRef} className="scroll-mt-4">
                         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            {best ? "Другие подходящие решения" : "Подходят"} — {best ? fit.length - 1 : fit.length} · по убыванию оценки
+                            {best ? "Другие подходящие решения" : "Подходят"} — {rest.length} · по убыванию оценки
+                            {limitsNote && !noneWithin && (
+                                <span className="ml-2 font-normal normal-case text-slate-400">
+                                    в пределах: {limitsNote}
+                                </span>
+                            )}
                         </h3>
                         {fit.length === 0 ? (
                             <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
                                 Для такого сочетания стеллажа, груза и прохода подходящих решений в каталоге нет. Попробуйте изменить параметры.
+                            </p>
+                        ) : rest.length === 0 ? (
+                            <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                                {noneWithin
+                                    ? "Остальные решения — ниже, в списке вне ваших ограничений."
+                                    : "В ваши ограничения уложилось только рекомендованное решение. Остальные — ниже, с объяснением, чего им не хватило."}
                             </p>
                         ) : (
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -233,6 +286,41 @@ export function ProjectOffers() {
                             </div>
                         )}
                     </section>
+
+                    {beyondRest.length > 0 && (
+                        <section>
+                            <button
+                                type="button"
+                                onClick={() => setShowBeyond((v) => !v)}
+                                className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                            >
+                                {showBeyond ? "▾" : "▸"} Подходят технически, но вне ваших ограничений — {beyondRest.length}
+                            </button>
+                            {/* Подпись видна и в свёрнутом виде: иначе непонятно, по каким условиям их отложили */}
+                            {limitsNote && <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">Условия: {limitsNote}</p>}
+                            {showBeyond && (
+                                <ul className="divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
+                                    {beyondRest.map(({ ranked: r, breaches }) => (
+                                        <li key={r.item.id} className="flex flex-col gap-1 p-4 sm:flex-row sm:items-start sm:justify-between">
+                                            <div>
+                                                <Link to={`/robots/${r.item.id}`} className="font-medium hover:underline">
+                                                    {r.item.offer.product.name}
+                                                </Link>
+                                                <span className="ml-2 text-xs text-slate-400">оценка {r.score} из 100</span>
+                                            </div>
+                                            <ul className="text-sm text-amber-700 dark:text-amber-400 sm:max-w-md sm:text-right">
+                                                {breaches.map((b) => (
+                                                    <li key={b.key}>
+                                                        {b.label}: {b.note}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </section>
+                    )}
 
                     {excluded.length > 0 && (
                         <section>

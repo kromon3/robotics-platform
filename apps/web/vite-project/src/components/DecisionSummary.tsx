@@ -1,5 +1,6 @@
 import type { Norms, ScenarioEconomics, SiteInput, Verdict, Zone } from "../viz/economics";
 import { PAYBACK_ZONE_HINT, paybackZone } from "../viz/economics";
+import { checkLimits, hasLimits, limitsSummary, type InvestmentLimits } from "../viz/investmentLimits";
 
 // Итог для того, кто принимает решение: что выбрать, сколько это даёт и почему — в одном блоке
 // наверху отчёта. Финансовому директору не нужно листать до таблиц, а детали остаются ниже.
@@ -13,6 +14,8 @@ type Props = {
     norms: Norms;
     /** id блока с подробным расчётом — для ссылки «Подробный расчёт» */
     detailsId: string;
+    /** Бюджет и норма доходности заказчика; не заданы — строка соответствия не показывается */
+    limits?: InvestmentLimits;
 };
 
 const mln = (n: number) => `${(n / 1e6).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млн ₽`;
@@ -33,7 +36,7 @@ function Figure({ label, value, hint, tone }: { label: string; value: string; hi
     );
 }
 
-export function DecisionSummary({ base, buy, raas, conclusion, site, norms, detailsId }: Props) {
+export function DecisionSummary({ base, buy, raas, conclusion, site, norms, detailsId, limits }: Props) {
     const years = norms.horizonYears;
     const none = conclusion.winner === "none";
     // Для «не окупается» показываем покупку: по ней видно, сколько не хватает
@@ -52,6 +55,11 @@ export function DecisionSummary({ base, buy, raas, conclusion, site, norms, deta
               : { value: "не окупается", tone: ZONE_TEXT.red, hint: "годовой эффект не возвращает вложения" };
 
     const remaining = Math.max(0, site.staffCount - win.replacedWorkers);
+
+    // Соответствие инвестиционным ограничениям считаем по тем же цифрам, что показаны выше,
+    // поэтому ползунки «что если» двигают и его: видно, при какой зарплате решение выходит из нормы
+    const showLimits = limits !== undefined && hasLimits(limits);
+    const breaches = showLimits ? checkLimits(win, limits) : [];
 
     return (
         <section
@@ -93,6 +101,30 @@ export function DecisionSummary({ base, buy, raas, conclusion, site, norms, deta
                     hint={`роботы заменяют ${win.replacedWorkers.toFixed(1)} чел., остальные остаются в расчёте`}
                 />
             </div>
+
+            {showLimits && (
+                <div
+                    className={`mt-4 rounded-xl border px-4 py-3 text-sm print:break-inside-avoid ${
+                        breaches.length === 0
+                            ? "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300"
+                            : "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+                    }`}
+                >
+                    <span className="font-semibold">
+                        {breaches.length === 0 ? "Укладывается в ваши ограничения" : "Не укладывается в ваши ограничения"}
+                    </span>
+                    <span className="text-xs opacity-80"> · задано: {limitsSummary(limits)}</span>
+                    {breaches.length > 0 && (
+                        <ul className="mt-1.5 space-y-0.5">
+                            {breaches.map((b) => (
+                                <li key={b.key}>
+                                    — {b.label}: {b.note}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+            )}
 
             <div className="mt-5 grid gap-4 text-sm lg:grid-cols-[2fr_1fr]">
                 <div>

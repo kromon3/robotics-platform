@@ -78,6 +78,10 @@ export interface EconFormData {
     replacedEquipmentCost: NumField;
     budget: NumField;
     horizonYears: NumField;
+    /** Норма доходности сроком: окупаемость не дольше, лет. Пусто — заказчик срок не ограничивает */
+    targetPaybackYears: NumField;
+    /** Норма доходности доходностью: ROI за горизонт не ниже, %. Пусто — не ограничивает */
+    minRoiPct: NumField;
 }
 
 export type EconFieldName = keyof EconFormData;
@@ -90,7 +94,7 @@ const EMPTY: EconFormData = {
     routeLengthPerLine: "", conveyorLength: "",
     dockLayout: ROUTE_DEFAULTS.dock, handlingSec: ROUTE_DEFAULTS.handlingSec,
     powerAvailableKw: "", hasWms: false, hasErp: false, replacedEquipmentCost: "",
-    budget: "", horizonYears: 5,
+    budget: "", horizonYears: 5, targetPaybackYears: "", minRoiPct: "",
 };
 
 /**
@@ -110,6 +114,8 @@ export const ECON_EXAMPLE: EconFormData = {
     dockLayout: ROUTE_DEFAULTS.dock, handlingSec: ROUTE_DEFAULTS.handlingSec,
     powerAvailableKw: 250, hasWms: true, hasErp: true, replacedEquipmentCost: 0,
     budget: 80_000_000, horizonYears: 5,
+    // Инвестиционный коридор примера: типичные для складской роботизации требования заказчика
+    targetPaybackYears: 3, minRoiPct: "",
 };
 
 export const ECON_LIMITS: Partial<Record<EconFieldName, { min: number; max: number }>> = {
@@ -135,6 +141,8 @@ export const ECON_LIMITS: Partial<Record<EconFieldName, { min: number; max: numb
     replacedEquipmentCost: { min: 0, max: 1_000_000_000 },
     budget: { min: 100_000, max: 10_000_000_000 },
     horizonYears: { min: 1, max: 15 },
+    targetPaybackYears: { min: 0.5, max: 15 },
+    minRoiPct: { min: -100, max: 1000 },
 };
 
 // Без этих полей расчёт не собрать

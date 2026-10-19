@@ -26,6 +26,7 @@ import { routeExplanation, type RouteOptions, type RoutedRobotInput } from "../v
 import { DOCK_LABEL, type DockLayout } from "../viz/routeModel";
 import { downloadChartPng, slugify } from "../lib/chart-export";
 import { DecisionSummary } from "./DecisionSummary.tsx";
+import type { InvestmentLimits } from "../viz/investmentLimits";
 
 const ZONE_STYLE: Record<Zone, string> = {
     green: "border-green-300 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300",
@@ -78,6 +79,8 @@ type Props = {
     onInputsChange?: (inputs: ReportInputs) => void;
     /** Модель маршрута; нет — робот стационарный или не хватает габаритов, блок не показывается */
     placement?: PlacementProps;
+    /** Бюджет и норма доходности заказчика — для строки соответствия в итоге */
+    limits?: InvestmentLimits;
 };
 
 const DOCKS: DockLayout[] = ["center", "corner"];
@@ -91,7 +94,7 @@ const DETAILS_ID = "report-details";
  * Блоки `hidden print:block` попадают только в PDF (ТЗ 3.7.3): титул, исходные данные,
  * нормативы, источники и ограничения — чтобы выгруженный отчёт читался без приложения.
  */
-export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseNorms, meta, onInputsChange, placement }: Props) {
+export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseNorms, meta, onInputsChange, placement, limits }: Props) {
     // What-if (ТЗ 3.5.3): три параметра, от которых сильнее всего зависит вывод.
     // Считаем в браузере теми же формулами, поэтому пересчёт мгновенный.
     const [salary, setSalary] = useState(baseSite.staffSalaryMonth);
@@ -270,6 +273,7 @@ export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseN
                 site={site}
                 norms={norms}
                 detailsId={DETAILS_ID}
+                limits={limits}
             />
 
             {whatIfChanges.length > 0 && (
