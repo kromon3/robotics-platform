@@ -338,6 +338,13 @@ export const roiZone = (roi: number | null): Zone | null =>
 export const budgetZone = (share: number | null): Zone | null =>
     share === null ? null : share <= 1 ? "green" : share <= 1.2 ? "yellow" : "red";
 
+/** Подпись к сроку окупаемости: в какой он зоне и где её границы (§11) */
+export const PAYBACK_ZONE_HINT: Record<Zone, string> = {
+    green: "зелёная зона — до 2,5 лет",
+    yellow: "жёлтая зона — 2,5–4 года",
+    red: "красная зона — дольше 4 лет",
+};
+
 export const ZONE_LABEL: Record<Zone, string> = {
     green: "в зелёной зоне",
     yellow: "требует проверки",

@@ -1,5 +1,5 @@
 import type { Norms, ScenarioEconomics, SiteInput, Verdict, Zone } from "../viz/economics";
-import { paybackZone } from "../viz/economics";
+import { PAYBACK_ZONE_HINT, paybackZone } from "../viz/economics";
 
 // Итог для того, кто принимает решение: что выбрать, сколько это даёт и почему — в одном блоке
 // наверху отчёта. Финансовому директору не нужно листать до таблиц, а детали остаются ниже.
@@ -47,7 +47,7 @@ export function DecisionSummary({ base, buy, raas, conclusion, site, norms, deta
               ? {
                     value: `${win.paybackYears.toLocaleString("ru-RU")} г.`,
                     tone: ZONE_TEXT[paybackZone(win.paybackYears) ?? "red"],
-                    hint: "зелёная зона — до 2,5 лет",
+                    hint: PAYBACK_ZONE_HINT[paybackZone(win.paybackYears) ?? "red"],
                 }
               : { value: "не окупается", tone: ZONE_TEXT.red, hint: "годовой эффект не возвращает вложения" };
 
