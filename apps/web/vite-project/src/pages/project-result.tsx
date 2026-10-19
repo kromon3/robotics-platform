@@ -236,35 +236,6 @@ export function ProjectResult() {
                 <div className="h-96 animate-pulse rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900" />
             )}
 
-            {/* Финал демо: расчёт человек уже увидел, теперь предлагаем посчитать свой объект */}
-            {demo && (
-                <section className="rounded-2xl border-2 border-indigo-300 bg-gradient-to-br from-indigo-50 to-white p-5 text-center dark:border-indigo-800 dark:from-indigo-950/50 dark:to-slate-900 print:hidden">
-                    <h3 className="text-lg font-semibold tracking-tight">Это расчёт по типовому складу</h3>
-                    <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
-                        Вы прошли весь путь: подбор решения с объяснением, экономику по трём сценариям и имитацию работы
-                        смены. Зарегистрируйтесь, чтобы ввести параметры своего объекта, сохранять расчёты и возвращаться
-                        к ним с версиями каталога и модели.
-                    </p>
-                    <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-                        <Link
-                            to="/auth"
-                            className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
-                        >
-                            Зарегистрироваться и ввести свои данные
-                        </Link>
-                        <Link
-                            to="/login"
-                            className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                        >
-                            У меня уже есть аккаунт
-                        </Link>
-                    </div>
-                    <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-                        Выгрузки в PDF и Excel работают и в демо — отчёт можно забрать с собой прямо сейчас.
-                    </p>
-                </section>
-            )}
-
             {tab === "report" && economics && (
                 <EconomicsReport
                     site={economics.site}
@@ -294,6 +265,35 @@ export function ProjectResult() {
                         <ScenarioView scenarios={scenarios} />
                     </ErrorBoundary>
                 </div>
+            )}
+
+            {/* Финал демо — после расчёта: сначала человек видит итог, потом предложение посчитать свой объект */}
+            {demo && (
+                <section className="rounded-2xl border-2 border-indigo-300 bg-gradient-to-br from-indigo-50 to-white p-5 text-center dark:border-indigo-800 dark:from-indigo-950/50 dark:to-slate-900 print:hidden">
+                    <h3 className="text-lg font-semibold tracking-tight">Это расчёт по типовому складу</h3>
+                    <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
+                        Вы прошли весь путь: подбор решения с объяснением, экономику по трём сценариям и имитацию работы
+                        смены. Зарегистрируйтесь, чтобы ввести параметры своего объекта, сохранять расчёты и возвращаться
+                        к ним с версиями каталога и модели.
+                    </p>
+                    <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                        <Link
+                            to="/auth"
+                            className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+                        >
+                            Зарегистрироваться и ввести свои данные
+                        </Link>
+                        <Link
+                            to="/login"
+                            className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                        >
+                            У меня уже есть аккаунт
+                        </Link>
+                    </div>
+                    <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                        Выгрузки в PDF и Excel работают и в демо — отчёт можно забрать с собой прямо сейчас.
+                    </p>
+                </section>
             )}
         </div>
     );

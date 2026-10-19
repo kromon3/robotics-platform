@@ -25,6 +25,7 @@ import type { ReportMeta } from "../lib/report-export";
 import { routeExplanation, type RouteOptions, type RoutedRobotInput } from "../viz/adapter";
 import { DOCK_LABEL, type DockLayout } from "../viz/routeModel";
 import { downloadChartPng, slugify } from "../lib/chart-export";
+import { DecisionSummary } from "./DecisionSummary.tsx";
 
 const ZONE_STYLE: Record<Zone, string> = {
     green: "border-green-300 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300",
@@ -80,6 +81,9 @@ type Props = {
 };
 
 const DOCKS: DockLayout[] = ["center", "corner"];
+
+// Якорь подробного расчёта — на него ссылается итог наверху
+const DETAILS_ID = "report-details";
 
 /**
  * Экономический отчёт: показатели с зонами интерпретации (§11 модели), структура CAPEX,
@@ -257,6 +261,113 @@ export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseN
                 </header>
             )}
 
+            {/* Итог для того, кто принимает решение: что выбрать и почему — первым */}
+            <DecisionSummary
+                base={base}
+                buy={buy}
+                raas={raas}
+                conclusion={conclusion}
+                site={site}
+                norms={norms}
+                detailsId={DETAILS_ID}
+            />
+
+            {whatIfChanges.length > 0 && (
+                <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+                    Показатели пересчитаны для изменённых параметров: {whatIfChanges.join(" · ")}
+                </p>
+            )}
+
+            {/* Сравнение сценариев */}
+            <section id={DETAILS_ID} className={`${card} scroll-mt-4`}>
+                <h3 className={title}>Сравнение сценариев</h3>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="border-b border-slate-200 text-left text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                                <th className="py-2 pr-4 font-medium">Показатель</th>
+                                <th className="py-2 pr-4 font-medium">Без роботизации</th>
+                                <th className={`py-2 pr-4 font-medium ${conclusion.winner === "buy" ? winnerHead : ""}`}>
+                                    Покупка {conclusion.winner === "buy" && <span className={winnerBadge}>выгоднее</span>}
+                                </th>
+                                <th className={`py-2 font-medium ${conclusion.winner === "raas" ? winnerHead : ""}`}>
+                                    RaaS {conclusion.winner === "raas" && <span className={winnerBadge}>выгоднее</span>}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {[
+                                { k: "Разовые затраты", a: "—", b: money(buy.capex), c: money(raas.capex), hint: "что платим сразу" },
+                                { k: "OPEX / год", a: money(base.opex), b: money(buy.opex), c: money(raas.opex), hint: "включая ФОТ оставшегося персонала" },
+                                { k: "Годовой эффект", a: "—", b: money(buy.annualEffect), c: money(raas.annualEffect), hint: "насколько дешевле, чем сейчас" },
+                                {
+                                    k: `TCO за ${baseYears} лет`,
+                                    a: money(base.tco),
+                                    b: money(buy.tco),
+                                    c: money(raas.tco),
+                                    hint: "решающий показатель сравнения",
+                                    diff: true,
+                                },
+                                {
+                                    k: "Срок окупаемости",
+                                    a: "—",
+                                    b: buy.paybackYears !== null ? `${buy.paybackYears} лет` : "—",
+                                    c: raas.paybackYears !== null ? `${raas.paybackYears} лет` : "нет разовых затрат",
+                                },
+                                { k: "Роботов", a: "—", b: `${buy.units} шт`, c: `${raas.units} шт` },
+                            ].map(({ k, a, b, c, hint, diff }) => (
+                                <tr key={k}>
+                                    <td className="py-2 pr-4 text-slate-500 dark:text-slate-400">
+                                        {k}
+                                        {hint && <span className="block text-[11px] text-slate-400 dark:text-slate-500">{hint}</span>}
+                                    </td>
+                                    <td className="py-2 pr-4 tabular-nums">{a}</td>
+                                    <td className={`py-2 pr-4 font-medium tabular-nums ${conclusion.winner === "buy" ? winnerCell : ""}`}>
+                                        {b}
+                                        {diff && (
+                                            <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400">
+                                                {base.tco - buy.tco >= 0 ? "экономия " : "дороже на "}
+                                                {money(Math.abs(base.tco - buy.tco))}
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className={`py-2 tabular-nums ${conclusion.winner === "raas" ? winnerCell : ""}`}>
+                                        {c}
+                                        {diff && (
+                                            <span className="block text-[11px] text-slate-500 dark:text-slate-400">
+                                                {base.tco - raas.tco >= 0 ? "экономия " : "дороже на "}
+                                                {money(Math.abs(base.tco - raas.tco))}
+                                            </span>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Заключение под таблицей (ТЗ 3.7.1). Полный вывод с причинами — в итоге наверху отчёта */}
+                <p
+                    className={`mt-4 rounded-xl border px-4 py-3 text-sm font-medium ${
+                        conclusion.winner === "none"
+                            ? ZONE_STYLE.red
+                            : "border-indigo-200 bg-indigo-50 text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-100"
+                    }`}
+                >
+                    Заключение: {conclusion.headline}
+                </p>
+            </section>
+
+
+            {/* Ключевые показатели с зонами */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Metric label="Срок окупаемости" value={buy.paybackYears !== null ? `${buy.paybackYears} лет` : "—"} zone={pZone} hint="зелёная ≤ 2,5 · жёлтая 2,5–4 · красная > 4" />
+                <Metric label={`ROI за ${baseYears} лет`} value={buy.roi !== null ? `${buy.roi}%` : "—"} zone={rZone} hint="зелёная ≥ 50% · жёлтая 0–50% · красная < 0" />
+                <Metric label="CAPEX / бюджет" value={buy.budgetShare !== null ? `${Math.round(buy.budgetShare * 100)}%` : "—"} zone={bZone} hint={`CAPEX ${money(buy.capex)} из ${money(site.budget)}`} />
+                <Metric label="Годовой эффект" value={money(buy.annualEffect)} zone={buy.annualEffect > 0 ? "green" : "red"} hint={`замещается ${buy.replacedWorkers.toFixed(1)} чел.`} />
+            </div>
+
+
             {/* What-if: пересчёт на лету, в печать не попадает — вместо него строка об изменениях */}
             <section className={`${card} print:hidden`}>
                 <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
@@ -303,7 +414,7 @@ export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseN
                     />
                 </div>
                 <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-                    Пересчитываются все показатели ниже, включая заключение и схему затрат. На сохранённый расчёт не влияет.
+                    Пересчитываются все показатели отчёта, включая итог наверху и схему затрат. На сохранённый расчёт не влияет.
                 </p>
 
                 {placement && (
@@ -388,123 +499,15 @@ export function EconomicsReport({ site: baseSite, robot: baseRobot, norms: baseN
                             </p>
                         )}
                         {routed.route && (
-                            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                                {routeExplanation(robot as RoutedRobotInput, placement.size, placement.speedMps)}
-                            </p>
+                            <details className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                <summary className="cursor-pointer select-none font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100">
+                                    Как посчитан пробег и число роботов
+                                </summary>
+                                <p className="mt-1">{routeExplanation(robot as RoutedRobotInput, placement.size, placement.speedMps)}</p>
+                            </details>
                         )}
                     </div>
                 )}
-            </section>
-
-            {whatIfChanges.length > 0 && (
-                <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
-                    Показатели пересчитаны для изменённых параметров: {whatIfChanges.join(" · ")}
-                </p>
-            )}
-
-            {/* Ключевые показатели с зонами */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <Metric label="Срок окупаемости" value={buy.paybackYears !== null ? `${buy.paybackYears} лет` : "—"} zone={pZone} hint="зелёная ≤ 2,5 · жёлтая 2,5–4 · красная > 4" />
-                <Metric label={`ROI за ${baseYears} лет`} value={buy.roi !== null ? `${buy.roi}%` : "—"} zone={rZone} hint="зелёная ≥ 50% · жёлтая 0–50% · красная < 0" />
-                <Metric label="CAPEX / бюджет" value={buy.budgetShare !== null ? `${Math.round(buy.budgetShare * 100)}%` : "—"} zone={bZone} hint={`CAPEX ${money(buy.capex)} из ${money(site.budget)}`} />
-                <Metric label="Годовой эффект" value={money(buy.annualEffect)} zone={buy.annualEffect > 0 ? "green" : "red"} hint={`замещается ${buy.replacedWorkers.toFixed(1)} чел.`} />
-            </div>
-
-            {/* Сравнение сценариев */}
-            <section className={card}>
-                <h3 className={title}>Сравнение сценариев</h3>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-slate-200 text-left text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                                <th className="py-2 pr-4 font-medium">Показатель</th>
-                                <th className="py-2 pr-4 font-medium">Без роботизации</th>
-                                <th className={`py-2 pr-4 font-medium ${conclusion.winner === "buy" ? winnerHead : ""}`}>
-                                    Покупка {conclusion.winner === "buy" && <span className={winnerBadge}>выгоднее</span>}
-                                </th>
-                                <th className={`py-2 font-medium ${conclusion.winner === "raas" ? winnerHead : ""}`}>
-                                    RaaS {conclusion.winner === "raas" && <span className={winnerBadge}>выгоднее</span>}
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {[
-                                { k: "Разовые затраты", a: "—", b: money(buy.capex), c: money(raas.capex), hint: "что платим сразу" },
-                                { k: "OPEX / год", a: money(base.opex), b: money(buy.opex), c: money(raas.opex), hint: "включая ФОТ оставшегося персонала" },
-                                { k: "Годовой эффект", a: "—", b: money(buy.annualEffect), c: money(raas.annualEffect), hint: "насколько дешевле, чем сейчас" },
-                                {
-                                    k: `TCO за ${baseYears} лет`,
-                                    a: money(base.tco),
-                                    b: money(buy.tco),
-                                    c: money(raas.tco),
-                                    hint: "решающий показатель сравнения",
-                                    diff: true,
-                                },
-                                {
-                                    k: "Срок окупаемости",
-                                    a: "—",
-                                    b: buy.paybackYears !== null ? `${buy.paybackYears} лет` : "—",
-                                    c: raas.paybackYears !== null ? `${raas.paybackYears} лет` : "нет разовых затрат",
-                                },
-                                { k: "Роботов", a: "—", b: `${buy.units} шт`, c: `${raas.units} шт` },
-                            ].map(({ k, a, b, c, hint, diff }) => (
-                                <tr key={k}>
-                                    <td className="py-2 pr-4 text-slate-500 dark:text-slate-400">
-                                        {k}
-                                        {hint && <span className="block text-[11px] text-slate-400 dark:text-slate-500">{hint}</span>}
-                                    </td>
-                                    <td className="py-2 pr-4 tabular-nums">{a}</td>
-                                    <td className={`py-2 pr-4 font-medium tabular-nums ${conclusion.winner === "buy" ? winnerCell : ""}`}>
-                                        {b}
-                                        {diff && (
-                                            <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400">
-                                                {base.tco - buy.tco >= 0 ? "экономия " : "дороже на "}
-                                                {money(Math.abs(base.tco - buy.tco))}
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className={`py-2 tabular-nums ${conclusion.winner === "raas" ? winnerCell : ""}`}>
-                                        {c}
-                                        {diff && (
-                                            <span className="block text-[11px] text-slate-500 dark:text-slate-400">
-                                                {base.tco - raas.tco >= 0 ? "экономия " : "дороже на "}
-                                                {money(Math.abs(base.tco - raas.tco))}
-                                            </span>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Заключение под таблицей (ТЗ 3.7.1): что выбрать и почему */}
-                <div
-                    className={`mt-5 rounded-xl border p-4 ${
-                        conclusion.winner === "none"
-                            ? ZONE_STYLE.red
-                            : "border-indigo-200 bg-indigo-50 text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-100"
-                    }`}
-                >
-                    <div className="text-xs font-semibold uppercase tracking-wide opacity-70">Заключение</div>
-                    <p className="mt-1 text-base font-semibold">{conclusion.headline}</p>
-                    <ul className="mt-2 space-y-1 text-sm">
-                        {conclusion.reasons.map((reason) => (
-                            <li key={reason} className="flex gap-2">
-                                <span aria-hidden>•</span>
-                                <span>{reason}</span>
-                            </li>
-                        ))}
-                    </ul>
-                    <ul className="mt-3 space-y-1 border-t border-current/20 pt-2 text-xs opacity-80">
-                        {conclusion.caveats.map((caveat) => (
-                            <li key={caveat} className="flex gap-2">
-                                <span aria-hidden>!</span>
-                                <span>{caveat}</span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
             </section>
 
             <div className="grid gap-6 lg:grid-cols-2">
