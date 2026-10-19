@@ -2,9 +2,10 @@ import { Link } from "react-router";
 import type { Product } from "../api/catalog.ts";
 import { paybackZone, type ScenarioEconomics, type Zone } from "../viz/economics";
 import type { VizRobot } from "../viz/robotSpecs";
-import { topReasons, weakest, type ScorePart } from "../viz/ranking";
+import { hasMeaningfulWeakness, strengths, weakest, type ScorePart } from "../viz/ranking";
 
-// Решение, которое платформа предлагает сама: лучшее по экономике среди совместимых.
+// Решение, которое платформа предлагает сама: лучшая итоговая оценка среди совместимых
+// (экономика — половина баллов, остальное — готовность, запас по ТТХ и достоверность данных).
 // Пользователь видит цифры и причину выбора сразу, а дальше может уйти к остальным решениям.
 
 type Props = {
@@ -41,8 +42,8 @@ function Figure({ label, value, hint, tone }: { label: string; value: string; hi
 export function RecommendedSolution({ product, robot, score, parts, economics, preliminary, onChoose, onCompare }: Props) {
     const { units, capex, annualEffect, paybackYears, tco } = economics;
     const zone = paybackZone(paybackYears);
-    const reasons = topReasons(parts, 2);
-    const weak = weakest(parts);
+    const reasons = strengths(parts, 2);
+    const weak = hasMeaningfulWeakness(parts) ? weakest(parts) : null;
 
     return (
         <section className="rounded-2xl border-2 border-indigo-300 bg-gradient-to-br from-indigo-50 to-white p-5 dark:border-indigo-800 dark:from-indigo-950/50 dark:to-slate-900">
@@ -51,7 +52,7 @@ export function RecommendedSolution({ product, robot, score, parts, economics, p
                     Рекомендуем
                 </span>
                 <span className="text-xs text-slate-500 dark:text-slate-400">
-                    лучшее по экономике среди {parts.length > 0 ? "совместимых" : ""} решений · оценка {score} из 100
+                    лучшая оценка среди совместимых решений · {score} из 100
                 </span>
             </div>
 
@@ -101,7 +102,7 @@ export function RecommendedSolution({ product, robot, score, parts, economics, p
                         На что обратить внимание
                     </div>
                     <p className="mt-1 text-slate-600 dark:text-slate-400">
-                        {weak.label.toLowerCase()}: {weak.note}
+                        {weak ? `${weak.label.toLowerCase()}: ${weak.note}` : "существенных недостатков среди подходящих решений нет"}
                     </p>
                 </div>
             </div>

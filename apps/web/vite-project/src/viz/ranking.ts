@@ -161,10 +161,12 @@ export function rankOffers<T extends RankInput>(
                     weight: WEIGHTS.tco,
                     value: lowerIsBetter(tco, bestTco),
                     points: 0,
+                    // «Лучший» — только если действительно минимальный. Процентный допуск тут врёт:
+                    // TCO включает ФОТ оставшегося персонала, и 2% от него — это миллионы рублей
                     note:
-                        tco <= bestTco * 1.02
+                        tco - bestTco < 1
                             ? `${fmt(tco)} ₽ за ${norms.horizonYears} лет — лучший показатель`
-                            : `${fmt(tco)} ₽ за ${norms.horizonYears} лет при ${fmt(bestTco)} ₽ у лучшего; разовые затраты ${fmt(capex)} ₽`,
+                            : `${fmt(tco)} ₽ за ${norms.horizonYears} лет — на ${fmt(tco - bestTco)} ₽ дороже лучшего; разовые затраты ${fmt(capex)} ₽`,
                 },
                 {
                     key: "units",
@@ -224,6 +226,30 @@ export const topReasons = (parts: ScorePart[], n = 2) =>
 /** Фактор, который сильнее всего недобрал — что мешает решению подняться выше */
 export const weakest = (parts: ScorePart[]) =>
     [...parts].sort((a, b) => a.weight - a.points - (b.weight - b.points))[parts.length - 1];
+
+/** Недобор меньше балла — не повод для предупреждения, это шум округления */
+export const hasMeaningfulWeakness = (parts: ScorePart[]) => {
+    const w = weakest(parts);
+    return w !== undefined && w.weight - w.points >= 1;
+};
+
+/**
+ * Сильные стороны для карточки рекомендации: где решение ближе всего к лучшему значению.
+ * topReasons для этого не годится — он ранжирует по баллам, а окупаемость весит 25 и даёт
+ * больше всех баллов, даже проигрывая другому решению. Тогда в «Почему это решение»
+ * попадало «1,12 г. против 1,03 г. у лучшего» — недостаток под видом причины.
+ * Слабая сторона сюда не попадает никогда: она показывается отдельно.
+ */
+export function strengths(parts: ScorePart[], n = 2): ScorePart[] {
+    const weakKey = hasMeaningfulWeakness(parts) ? weakest(parts).key : null;
+    const candidates = parts.filter((p) => p.key !== weakKey);
+    // Только факторы, где решение на максимуме, — тяжёлые выше лёгких. Мягкий порог (0,95) не годится:
+    // доля от лучшего у TCO сжата общим ФОТ, и 0,98 может означать «на 2,5 млн дороже»
+    const strong = candidates.filter((p) => p.value >= 0.995).sort((a, b) => b.weight - a.weight);
+    if (strong.length > 0) return strong.slice(0, n);
+    // Сильных нет — показываем лучшее, что есть, честно по доле от максимума
+    return [...candidates].sort((a, b) => b.value - a.value).slice(0, n);
+}
 
 export const effectivePerRobot = (robot: VizRobot, norms: Norms) =>
     Math.round(effectiveThroughput({ name: robot.name, price: robot.price, throughputPerHour: robot.throughputPerHour }, norms));

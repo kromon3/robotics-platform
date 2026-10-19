@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_NORMS, type SiteInput } from "./economics";
-import { WEIGHTS, rankOffers, topReasons, weakest, type RankInput } from "./ranking";
+import { WEIGHTS, hasMeaningfulWeakness, rankOffers, strengths, topReasons, weakest, type RankInput } from "./ranking";
 import type { VizRobot } from "./robotSpecs";
 
 const SITE: SiteInput = {
@@ -143,5 +143,49 @@ describe("ранжирование подобранных решений", () =>
 
     it("пустой список решений не ломает расчёт", () => {
         expect(rankOffers([], SITE, DEFAULT_NORMS, CARGO_KG, AISLE)).toEqual([]);
+    });
+});
+
+describe("сильные стороны в карточке рекомендации", () => {
+    // Два почти одинаковых робота: у «b» окупаемость чуть хуже, но остальное — на максимуме.
+    // Окупаемость весит 25 и даже проигрывая даёт больше всех баллов — раньше она попадала
+    // в «Почему это решение» с текстом «X г. против Y г. у лучшего решения»
+    const ranked = rankOffers(
+        [offer("a", {}, { price: 2_000_000, payloadKg: 2000 }), offer("b", {}, { price: 2_300_000, payloadKg: 2000 })],
+        SITE, DEFAULT_NORMS, CARGO_KG, AISLE,
+    );
+    const b = ranked.find((r) => r.item.id === "b")!;
+
+    it("окупаемость хуже лучшей не выдаётся за причину выбора", () => {
+        const payback = b.parts.find((p) => p.key === "payback")!;
+        expect(payback.value).toBeLessThan(0.995);
+        expect(strengths(b.parts).map((p) => p.key)).not.toContain("payback");
+    });
+
+    it("слабая сторона никогда не попадает в сильные", () => {
+        for (const r of ranked) {
+            if (!hasMeaningfulWeakness(r.parts)) continue;
+            expect(strengths(r.parts).map((p) => p.key)).not.toContain(weakest(r.parts).key);
+        }
+    });
+
+    it("у решения без недостатков предупреждения нет", () => {
+        const [best] = rankOffers([offer("a", {}, { payloadKg: 2000 })], SITE, DEFAULT_NORMS, 600, AISLE);
+        expect(best.score).toBe(100);
+        expect(hasMeaningfulWeakness(best.parts)).toBe(false);
+    });
+
+    it("TCO дороже лучшего не называется лучшим и не попадает в сильные", () => {
+        const tco = b.parts.find((p) => p.key === "tco")!;
+        expect(tco.note).not.toMatch(/лучший показатель/);
+        expect(tco.note).toMatch(/дороже лучшего/);
+        expect(strengths(b.parts).map((p) => p.key)).not.toContain("tco");
+    });
+
+    it("в сильные попадают факторы на максимуме, тяжёлые выше лёгких", () => {
+        const top = strengths(b.parts, 3);
+        expect(top.length).toBeGreaterThan(0);
+        for (const p of top) expect(p.value).toBeGreaterThanOrEqual(0.995);
+        for (let i = 1; i < top.length; i++) expect(top[i - 1].weight).toBeGreaterThanOrEqual(top[i].weight);
     });
 });
