@@ -13,6 +13,8 @@ import { fetchWarehouseProducts, rankFit, splitOffers, type Offer } from "../lib
 import { DEFAULT_NORMS } from "../viz/economics";
 import { toNorms } from "../viz/adapter";
 import { limitsSummary, splitByLimits, toLimits, type LimitBreach } from "../viz/investmentLimits";
+import { RealismWarnings } from "../components/RealismWarnings.tsx";
+import { checkRealism } from "../lib/realism";
 import type { Product } from "../api/catalog.ts";
 import { toast } from "sonner";
 
@@ -63,6 +65,10 @@ export function ProjectOffers() {
             }),
         [fit, p, econ, hasEcon],
     );
+
+    // Противоречия в параметрах: на эту страницу можно вернуться с сохранённым расчётом,
+    // а подбор и экономика считаются именно по этим значениям — предупредить надо и здесь
+    const warnings = useMemo(() => checkRealism(p, hasEcon ? toEconNumeric(econ) : undefined), [p, econ, hasEcon]);
 
     // Инвестиционный коридор заказчика: бюджет и норма доходности (ТЗ 3.4.5, 3.5.7).
     // Берём из сырой формы, а не из toEconNumeric: там пустое поле превращается в 0,
@@ -184,6 +190,8 @@ export function ProjectOffers() {
                 onClear={() => setCompareIds([])}
                 onRemove={toggleCompare}
             />
+
+            <RealismWarnings warnings={warnings} />
 
             {items && noneWithin && (
                 <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 dark:border-amber-900 dark:bg-amber-950/40">

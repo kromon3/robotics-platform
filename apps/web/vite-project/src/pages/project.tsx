@@ -1,7 +1,9 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useDemoStore } from "../store/demoStore";
 import { DemoLock } from "../components/DemoLock.tsx";
+import { RealismWarnings } from "../components/RealismWarnings.tsx";
+import { checkRealism } from "../lib/realism";
 import { toast } from "sonner";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { A11y, EffectCreative } from "swiper/modules";
@@ -14,6 +16,7 @@ import {
     getFieldValue,
     getInvalidFields,
     getMissingFields,
+    toNumericFormData,
     useProjectStore,
     type ProjectFieldName,
 } from "../store/store";
@@ -182,6 +185,14 @@ export function Project() {
     const reset = useProjectStore((state) => state.reset);
     const demo = useDemoStore((s) => s.active);
     const fillExample = useProjectStore((state) => state.fillExample);
+    const formData = useProjectStore((state) => state.formData);
+
+    // Противоречия в сочетаниях параметров: показываем, только когда заполнено всё обязательное,
+    // иначе на половине заполненной формы предупреждения сыпались бы на каждом шаге
+    const warnings = useMemo(
+        () => (getMissingFields(formData).length === 0 ? checkRealism(toNumericFormData(formData)) : []),
+        [formData],
+    );
 
     const isFirst = activeIndex === 0;
     const isLast = activeIndex === TOTAL_SLIDES - 1;
@@ -358,6 +369,8 @@ export function Project() {
                     ))}
                 </div>
             </div>
+
+            <RealismWarnings warnings={warnings} />
         </div>
     );
 }

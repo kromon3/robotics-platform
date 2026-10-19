@@ -10,13 +10,16 @@ import {
     WORK_MODES,
     getEconInvalid,
     getEconMissing,
+    toEconNumeric,
     useEconStore,
     type EconFieldName,
 } from "../store/econStore";
-import { CARGO_TYPES, getInvalidFields, getMissingFields, useProjectStore } from "../store/store";
+import { CARGO_TYPES, getInvalidFields, getMissingFields, toNumericFormData, useProjectStore } from "../store/store";
 import { pricedRacksFor, rackLabel } from "../viz/rackCatalog";
 import { useDemoStore } from "../store/demoStore";
 import { DemoLock } from "../components/DemoLock.tsx";
+import { RealismWarnings } from "../components/RealismWarnings.tsx";
+import { checkRealism } from "../lib/realism";
 
 const n = (v: number | "") => (v === "" ? 0 : v);
 
@@ -188,6 +191,15 @@ export function ProjectEconomics() {
 
     // Без параметров объекта и выбранного робота считать нечего
     const phase1Ready = getMissingFields(formData).length === 0 && getInvalidFields(formData).length === 0;
+
+    // Противоречия в параметрах: здесь доступны обе фазы, поэтому проверок больше, чем в первой
+    const warnings = useMemo(
+        () =>
+            phase1Ready && getEconMissing(econ).length === 0
+                ? checkRealism(toNumericFormData(formData), toEconNumeric(econ))
+                : [],
+        [phase1Ready, formData, econ],
+    );
     if (!phase1Ready) return <Navigate to="/projects/warehouse" replace />;
     if (!productId) return <Navigate to="/projects/offers" replace />;
 
@@ -259,6 +271,9 @@ export function ProjectEconomics() {
                 onSubmit={submit}
                 gotoStepRef={gotoField}
             />
+
+            {/* Обе фазы заполнены — проверяем и сочетания между ними: календарь, персонал, объём */}
+            <RealismWarnings warnings={warnings} className="mt-6" />
         </div>
     );
 }
