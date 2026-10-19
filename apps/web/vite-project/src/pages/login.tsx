@@ -124,8 +124,9 @@ export function Login() {
                     </p>
                 </form>
 
+                {/* Только учётка с ролью USER: админская даёт доступ к /admin — правка каталога и почта пользователей */}
                 <p className="mt-6 text-center text-xs text-slate-400">
-                    Демо-доступ: admin@robotics.local / admin12345
+                    Демо-доступ: user@robotics.local / user12345
                 </p>
             </div>
         </div>
