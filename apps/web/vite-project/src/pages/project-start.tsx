@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { OBJECT_TYPES, type ObjectTypeKey } from "../lib/object-types";
 
 // Точка входа в новый расчёт: выбор типа объекта (ТЗ 3.2.1).
@@ -102,7 +102,15 @@ export function ProjectStart() {
                 })}
             </div>
 
-            <p className="mt-8 text-xs text-slate-400 dark:text-slate-500">
+            {/* Тому, кто пока не готов вводить данные своего объекта */}
+            <Link
+                to="/demo"
+                className="mt-8 rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-950/70"
+            >
+                Не готовы вводить данные? Посмотрите демо на готовых примерах за 40 секунд →
+            </Link>
+
+            <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
                 Каталог решений и расчёт доступны без входа — авторизация нужна, чтобы сохранять расчёты.
             </p>
         </div>

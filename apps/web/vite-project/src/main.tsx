@@ -20,6 +20,7 @@ import {Calculations} from "./pages/calculations.tsx";
 import {ProjectEconomics} from "./pages/project-economics.tsx";
 import {ProjectResult} from "./pages/project-result.tsx";
 import {Privacy} from "./pages/privacy.tsx";
+import {Demo} from "./pages/demo.tsx";
 import {PrivacyNotice} from "./components/PrivacyNotice.tsx";
 
 createRoot(document.getElementById('root')!).render(
@@ -28,6 +29,7 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
               <Route element={<AppLayout />}>
                   <Route index element={<App />} />
+                  <Route path="/demo" element={<Demo />} />
                   <Route path="/projects" element={<ProjectStart />} />
                   <Route path="/projects/warehouse" element={<Project />} />
                   <Route path="/projects/soon/:type" element={<ObjectTypeSoon />} />

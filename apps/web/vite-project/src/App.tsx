@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import axios from "axios";
 import { isAuthenticated, projectsApi, type ProjectSummary } from "./api/projects.ts";
 import { paybackZone, roiZone, type Zone } from "./viz/economics";
+import { DemoHero } from "./components/DemoHero.tsx";
 
 // Сводка по аккаунту: каталог доступен всем, проекты и расчёты — только после входа.
 
@@ -125,6 +126,9 @@ function App() {
 
     return (
         <div className="flex flex-col gap-6">
+            {/* Первым — вход в демо: тот, кто открыл платформу впервые, видит, что она даёт */}
+            <DemoHero />
+
             <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="text-xl font-semibold tracking-tight">Сводка</h2>
                 <Link

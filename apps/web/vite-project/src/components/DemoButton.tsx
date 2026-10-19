@@ -1,19 +1,14 @@
 import { useNavigate } from "react-router";
-import { useDemoStore } from "../store/demoStore";
 
-// Вход в демо с экранов авторизации: гость смотрит готовый расчёт, ничего не заполняя.
+// Вход в демо с экранов авторизации: гость двигает 4 ползунка и сразу видит робота, окупаемость и склад.
 
 export function DemoButton({ className = "" }: { className?: string }) {
     const navigate = useNavigate();
-    const start = useDemoStore((s) => s.start);
 
     return (
         <button
             type="button"
-            onClick={() => {
-                start();
-                navigate("/projects/warehouse");
-            }}
+            onClick={() => navigate("/demo")}
             className={`group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-4 text-left shadow-lg shadow-indigo-500/30 transition hover:shadow-xl hover:shadow-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 ${className}`}
         >
             {/* Блик, пробегающий по кнопке: её трудно не заметить */}
@@ -25,7 +20,7 @@ export function DemoButton({ className = "" }: { className?: string }) {
                 <span>
                     <span className="block text-base font-semibold text-white">Посмотреть демо без регистрации</span>
                     <span className="mt-0.5 block text-xs text-indigo-100">
-                        Готовый склад 48 × 30 м: подбор решения, экономика и имитация за полминуты
+                        Три примера складов: подбор робота, окупаемость и схема — за 40 секунд
                     </span>
                 </span>
                 <span className="shrink-0 text-2xl text-white transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
