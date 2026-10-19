@@ -54,7 +54,10 @@ export function AppLayout() {
 
                 <DemoBanner />
 
-                <main className="flex-1 overflow-y-auto p-4 lg:p-6 print:overflow-visible print:p-0">
+                {/* relative — обязательно: без него абсолютные элементы без позиционированного предка
+                    (например, .sr-only-подсказки в таблицах) отсчитываются от документа, а не от <main>,
+                    прокрутка <main> их не обрезает, и они растягивают страницу — снизу вылезает белый фон body */}
+                <main className="relative flex-1 overflow-y-auto p-4 lg:p-6 print:overflow-visible print:p-0">
                     <Outlet />
                 </main>
             </div>
