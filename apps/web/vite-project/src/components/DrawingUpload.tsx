@@ -16,7 +16,9 @@ const MAX_DXF_MB = 25;
 
 const fmt = (n: number, digits = 1) => n.toLocaleString("ru-RU", { maximumFractionDigits: digits });
 
-function Preview({ segments, width, length }: { segments: [number, number, number, number][]; width: number; length: number }) {
+type PreviewProps = { segments: [number, number, number, number][]; outline: [number, number][] | null; width: number; length: number };
+
+function Preview({ segments, outline, width, length }: PreviewProps) {
     // Превью — не больше 4000 отрезков: для узнавания контура хватает
     const step = Math.max(1, Math.ceil(segments.length / 4000));
     const pad = Math.max(width, length) * 0.03;
@@ -33,6 +35,15 @@ function Preview({ segments, width, length }: { segments: [number, number, numbe
                         <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} />
                     ))}
             </g>
+            {outline && (
+                // Найденный контур здания — чтобы было видно, по чему посчитана площадь
+                <polygon
+                    points={outline.map(([x, y]) => `${x},${y}`).join(" ")}
+                    strokeWidth={Math.max(width, length) / 120}
+                    strokeLinejoin="round"
+                    className="fill-indigo-500/10 stroke-indigo-500"
+                />
+            )}
         </svg>
     );
 }
@@ -49,6 +60,19 @@ export function DrawingUpload() {
         () => (underlay?.kind === "dxf" ? measure(underlay.drawing, underlay.units) : null),
         [underlay],
     );
+
+    const outlineNotes = useMemo(() => {
+        const info = underlay?.kind === "dxf" ? underlay.drawing.stats.outline : undefined;
+        if (!info || info.from !== "lines") return [];
+        const notes = [{ text: "Контур собран из отдельных линий стен — на превью он выделен.", warn: false }];
+        if (info.gapM >= 0.005) {
+            notes.push({ text: `Концы стен в чертеже не сходились — закрыли зазоры до ${fmt(info.gapM * 1000, 0)} мм. Сверьте контур на превью.`, warn: true });
+        }
+        if (info.others > 0) {
+            notes.push({ text: `Вне здания в чертеже есть ещё замкнутые контуры (${info.others}) — взят наибольший.`, warn: true });
+        }
+        return notes;
+    }, [underlay]);
 
     const onFile = async (file: File) => {
         const kind = fileKind(file.name);
@@ -190,9 +214,15 @@ export function DrawingUpload() {
                         </p>
                         {!measured.byOutline && (
                             <p className="text-xs text-amber-700 dark:text-amber-400">
-                                Замкнутого контура здания в чертеже нет — площадь посчитана по прямоугольной рамке всех линий.
+                                Замкнутого контура здания в чертеже нет — площадь посчитана по прямоугольной рамке всех линий. Так
+                                бывает, если в стенах разрывы (проёмы ворот): замкните контур в CAD или проверьте габариты.
                             </p>
                         )}
+                        {outlineNotes.map((note) => (
+                            <p key={note.text} className={`text-xs ${note.warn ? "text-amber-700 dark:text-amber-400" : "text-slate-500 dark:text-slate-400"}`}>
+                                {note.text}
+                            </p>
+                        ))}
                         {!fits && (
                             <p className="mt-1 text-xs text-red-700 dark:text-red-400">
                                 Склад {fmt(measured.widthM)} × {fmt(measured.lengthM)} м выходит за допустимые {limits.w.min}–{limits.w.max} м —
@@ -240,7 +270,7 @@ export function DrawingUpload() {
                             расставляются.
                         </p>
                     </div>
-                    <Preview segments={measured.segmentsM} width={measured.widthM} length={measured.lengthM} />
+                    <Preview segments={measured.segmentsM} outline={measured.outlineM} width={measured.widthM} length={measured.lengthM} />
                 </div>
             )}
 

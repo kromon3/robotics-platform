@@ -105,6 +105,91 @@ describe("чертёж склада из DXF", () => {
     });
 });
 
+describe("контур из отдельных линий, дуги и сплайны", () => {
+    // Стены отдельными отрезками по кругу; gap — насколько каждый конец не дотянут до следующей стены
+    const walls = (pts: [number, number][], gap = 0) =>
+        pts
+            .map(([x1, y1], i) => {
+                const [x2, y2] = pts[(i + 1) % pts.length];
+                const len = Math.hypot(x2 - x1, y2 - y1);
+                return line(x1, y1, x2 - ((x2 - x1) / len) * gap, y2 - ((y2 - y1) / len) * gap);
+            })
+            .join("\n");
+    const lShape: [number, number][] = [[0, 0], [60_000, 0], [60_000, 20_000], [40_000, 20_000], [40_000, 40_000], [0, 40_000]];
+
+    it("стены отдельными отрезками с неаккуратной привязкой — контур собирается, площадь по нему", () => {
+        const d = dxfToDrawing(dxf({ insunits: 4, entities: walls(lShape, 0.5) }), "линии.dxf");
+        const m = measure(d);
+        expect(m.byOutline).toBe(true);
+        expect(m.areaM2).toBeCloseTo(2000, 0);
+        expect(d.stats.outline?.from).toBe("lines");
+        expect(d.stats.outline?.gapM).toBeLessThanOrEqual(0.001);
+    });
+
+    it("зазор в полсантиметра закрывается, но о нём известно", () => {
+        const d = dxfToDrawing(dxf({ insunits: 4, entities: walls(lShape, 5) }), "зазоры.dxf");
+        expect(measure(d).areaM2).toBeCloseTo(2000, 0);
+        expect(d.stats.outline?.gapM).toBeCloseTo(0.01);
+    });
+
+    it("стены заходят друг за друга крестом, перегородка упирается буквой «Т» — контур тот же", () => {
+        const entities = [
+            line(-500, 0, 60_500, 0),
+            line(60_000, -500, 60_000, 40_500),
+            line(60_500, 40_000, -500, 40_000),
+            line(0, 40_500, 0, -500),
+            line(30_000, 0, 30_000, 25_000), // перегородка от стены внутрь
+        ].join("\n");
+        const m = measure(dxfToDrawing(dxf({ insunits: 4, entities }), "крест.dxf"));
+        expect(m.widthM).toBeCloseTo(60);
+        expect(m.lengthM).toBeCloseTo(40);
+        expect(m.areaM2).toBeCloseTo(2400, 0);
+    });
+
+    it("здание из двух полилиний-корпусов — контур общий", () => {
+        const entities = [polyline(rect(30, 40)), polyline(rect(30, 40).map(([x, y]) => [x + 30, y] as [number, number]))].join("\n");
+        const d = dxfToDrawing(dxf({ insunits: 6, entities }), "корпуса.dxf");
+        expect(measure(d).areaM2).toBeCloseTo(2400);
+        expect(d.stats.outline?.from).toBe("lines");
+    });
+
+    it("стены разорваны — контуром не становится стеллаж внутри", () => {
+        // Стены с проёмом в метр, внутри один замкнутый стеллаж
+        const entities = [walls(rect(60, 40), 1), polyline([[10, 10], [50, 10], [50, 11], [10, 11]])].join("\n");
+        const d = dxfToDrawing(dxf({ insunits: 6, entities }), "проёмы.dxf");
+        const m = measure(d);
+        expect(m.byOutline).toBe(false);
+        expect(m.widthM).toBeCloseTo(60);
+        expect(m.lengthM).toBeCloseTo(40);
+    });
+
+    it("скругление в полилинии — дуга, а не хорда", () => {
+        // Прямоугольник 6 × 8 м, верхняя стена — полуокружность радиусом 3 м (bulge = 1)
+        const pl = pairs(0, "LWPOLYLINE", 8, "0", 90, 4, 70, 1, 10, 0, 20, 0, 10, 6000, 20, 0, 10, 6000, 20, 8000, 42, 1, 10, 0, 20, 8000);
+        const m = measure(dxfToDrawing(dxf({ insunits: 4, entities: pl }), "скругление.dxf"));
+        expect(m.widthM).toBeCloseTo(6);
+        expect(m.lengthM).toBeCloseTo(11, 1);
+        expect(m.areaM2).toBeCloseTo(48 + (Math.PI * 9) / 2, 0);
+    });
+
+    it("эллипс и сплайн рисуются, а не пропускаются", () => {
+        const ellipse = pairs(0, "ELLIPSE", 8, "0", 10, 50, 20, 20, 30, 0, 11, 10, 21, 0, 31, 0, 40, 0.5, 41, 0, 42, 2 * Math.PI);
+        // Квадратичный сплайн через (0,0)–(20,0) с вершиной на высоте 5
+        const spline = pairs(0, "SPLINE", 8, "0", 70, 8, 71, 2, 72, 6, 73, 3, 40, 0, 40, 0, 40, 0, 40, 1, 40, 1, 40, 1, 10, 0, 20, 0, 30, 0, 10, 10, 20, 10, 30, 0, 10, 20, 20, 0, 30, 0);
+        const d = dxfToDrawing(dxf({ insunits: 6, entities: [ellipse, spline].join("\n") }), "кривые.dxf");
+        expect(d.stats.skipped.ELLIPSE).toBeUndefined();
+        expect(d.stats.skipped.SPLINE).toBeUndefined();
+        const ys = d.segments.flatMap(([, y1, , y2]) => [y1, y2]);
+        const xs = d.segments.flatMap(([x1, , x2]) => [x1, x2]);
+        expect(Math.max(...ys)).toBeCloseTo(25); // верх эллипса: 20 + 10 · 0,5
+        expect(Math.min(...xs)).toBeCloseTo(0);
+        expect(Math.max(...xs)).toBeCloseTo(60);
+        // Вершина сплайна — посередине, на высоте 5
+        const splineTop = d.segments.filter(([x1]) => x1 < 21).flatMap(([, y1, , y2]) => [y1, y2]);
+        expect(Math.max(...splineTop)).toBeCloseTo(5, 1);
+    });
+});
+
 describe("чертёж сохраняется вместе с расчётом", () => {
     const plan = () => {
         // Контур 60 × 40 м в миллиметрах и 8 рядов стеллажей

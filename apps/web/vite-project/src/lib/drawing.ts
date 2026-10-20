@@ -2,6 +2,7 @@
 // а в Node (тесты) — CommonJS, где класс и есть весь модуль и именованного экспорта нет
 import DxfParser from "dxf-parser";
 import type { IDxf, IEntity, IPoint } from "dxf-parser";
+import { outerContour } from "./contour";
 
 // Чертёж склада из AutoCAD (DXF). Минимально рабочий, а не декоративный: из чертежа берутся
 // реальные габариты и площадь контура здания — они уходят в расчёт (модель маршрута → число
@@ -26,10 +27,19 @@ export type Drawing = {
     unitsSource: "file" | "guess";
     /** Отрезки в единицах файла — единицы можно поменять без повторного разбора */
     segments: Segment[];
-    /** Контур здания — наибольшая замкнутая полилиния; нет — берём рамку всех линий */
+    /** Контур здания — замкнутая полилиния или собранный из отдельных линий; нет — берём рамку всех линий */
     outline: Pt[] | null;
     /** Сколько сущностей разобрано и каких типов пропущено */
-    stats: { entities: number; skipped: Record<string, number>; truncated: boolean };
+    stats: { entities: number; skipped: Record<string, number>; truncated: boolean; outline?: OutlineInfo };
+};
+
+/** Откуда контур: из полилинии или собран из линий — и насколько пришлось стягивать концы */
+export type OutlineInfo = {
+    from: "polyline" | "lines";
+    /** Наибольший зазор между концами линий, который пришлось закрыть, в метрах */
+    gapM: number;
+    /** Сколько ещё замкнутых контуров вне найденного */
+    others: number;
 };
 
 export type Measured = {
@@ -40,6 +50,8 @@ export type Measured = {
     byOutline: boolean;
     /** Отрезки в метрах: начало координат — левый верхний угол контура, ось Y вниз, как на схеме */
     segmentsM: Segment[];
+    /** Контур здания в тех же координатах — чтобы показать, что именно нашли */
+    outlineM: [number, number][] | null;
 };
 
 /** Больше отрезков схема не тянет без тормозов; для плана склада этого достаточно с запасом */
@@ -47,9 +59,79 @@ const MAX_SEGMENTS = 60_000;
 /** Вложенные блоки (INSERT внутри блока) разворачиваем не глубже — защита от зацикленных ссылок */
 const MAX_DEPTH = 4;
 const ARC_STEPS = 24;
+/** Допуски стягивания концов линий, м: 0,01 мм — погрешность чисел, 1 мм — неаккуратная привязка, 1 см — уже повод проверить */
+const SNAP_M = [0.00001, 0.001, 0.01];
 
 type Transform = (p: Pt) => Pt;
 const identity: Transform = (p) => p;
+
+/** Число шагов для дуги: полная окружность — ARC_STEPS, короткая дуга — меньше, но не меньше двух */
+const arcSteps = (sweep: number) => Math.max(2, Math.ceil((ARC_STEPS * Math.abs(sweep)) / (2 * Math.PI)));
+
+type BulgeVertex = IPoint & { bulge?: number };
+
+/**
+ * Вершины полилинии с дугами. В DXF скругление хранится в вершине как bulge = tg(угол дуги / 4):
+ * дуга идёт от этой вершины к следующей, знак — направление. Без этого скругления превращаются в хорды.
+ */
+export function expandBulges(vertices: BulgeVertex[], closed: boolean): Pt[] {
+    const out: Pt[] = [];
+    const n = vertices.length;
+    for (let i = 0; i < n; i++) {
+        const a = vertices[i];
+        out.push({ x: a.x, y: a.y });
+        const b = vertices[(i + 1) % n];
+        const bulge = a.bulge ?? 0;
+        if (!bulge || (!closed && i === n - 1)) continue;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const chord = Math.hypot(dx, dy);
+        if (chord === 0) continue;
+        // Центр — на перпендикуляре к хорде; при bulge > 0 дуга против часовой, центр слева
+        const off = (1 - bulge * bulge) / (4 * bulge);
+        const c = { x: (a.x + b.x) / 2 - dy * off, y: (a.y + b.y) / 2 + dx * off };
+        const r = Math.hypot(a.x - c.x, a.y - c.y);
+        const start = Math.atan2(a.y - c.y, a.x - c.x);
+        const sweep = 4 * Math.atan(bulge);
+        const steps = arcSteps(sweep);
+        for (let k = 1; k < steps; k++) {
+            const t = start + (sweep * k) / steps;
+            out.push({ x: c.x + r * Math.cos(t), y: c.y + r * Math.sin(t) });
+        }
+    }
+    return out;
+}
+
+/** Точка B-сплайна по алгоритму де Бура; веса рациональных сплайнов dxf-parser не читает — для плана это не важно */
+function deBoor(ctrl: IPoint[], knots: number[], p: number, t: number): Pt {
+    let k = p;
+    while (k < ctrl.length - 1 && t >= knots[k + 1]) k++;
+    const d = Array.from({ length: p + 1 }, (_, j) => ({ x: ctrl[j + k - p].x, y: ctrl[j + k - p].y }));
+    for (let r = 1; r <= p; r++) {
+        for (let j = p; j >= r; j--) {
+            const i = j + k - p;
+            const denom = knots[i + p - r + 1] - knots[i];
+            const alpha = denom === 0 ? 0 : (t - knots[i]) / denom;
+            d[j] = { x: (1 - alpha) * d[j - 1].x + alpha * d[j].x, y: (1 - alpha) * d[j - 1].y + alpha * d[j].y };
+        }
+    }
+    return d[p];
+}
+
+/** Сплайн ломаной: по узлам и контрольным точкам, если их хватает; иначе — через точки, по которым его строили */
+function splinePoints(ent: Record<string, unknown>): Pt[] {
+    const ctrl = (ent.controlPoints as IPoint[] | undefined) ?? [];
+    const knots = (ent.knotValues as number[] | undefined) ?? [];
+    const p = (ent.degreeOfSplineCurve as number | undefined) ?? 3;
+    if (ctrl.length > p && knots.length === ctrl.length + p + 1) {
+        const t0 = knots[p];
+        const t1 = knots[ctrl.length];
+        const steps = Math.max(ARC_STEPS, ctrl.length * 4);
+        return Array.from({ length: steps + 1 }, (_, i) => deBoor(ctrl, knots, p, t0 + ((t1 - t0) * i) / steps));
+    }
+    const fit = (ent.fitPoints as IPoint[] | undefined) ?? [];
+    return fit.length >= 2 ? fit : ctrl;
+}
 
 function shoelace(pts: Pt[]): number {
     let s = 0;
@@ -119,13 +201,34 @@ export function dxfToDrawing(text: string, name: string): Drawing {
                 }
                 case "LWPOLYLINE":
                 case "POLYLINE": {
-                    const v = ((ent.vertices as IPoint[] | undefined) ?? []).map(tf);
+                    const isClosed = Boolean(ent.shape);
+                    const v = expandBulges((ent.vertices as BulgeVertex[] | undefined) ?? [], isClosed).map(tf);
                     for (let i = 0; i + 1 < v.length; i++) push(v[i], v[i + 1]);
-                    if (ent.shape && v.length > 2) {
+                    if (isClosed && v.length > 2) {
                         push(v[v.length - 1], v[0]);
                         // Контуром здания может быть только полилиния самого чертежа, не деталь блока
                         if (topLevel) closed.push(v);
                     }
+                    break;
+                }
+                case "ELLIPSE": {
+                    const c = ent.center as IPoint;
+                    const m = ent.majorAxisEndPoint as IPoint;
+                    const ratio = (ent.axisRatio as number) || 1;
+                    const start = (ent.startAngle as number) ?? 0;
+                    let end = (ent.endAngle as number) ?? Math.PI * 2;
+                    if (end <= start) end += Math.PI * 2;
+                    // Точка эллипса: центр + большая полуось · cos t + малая (большая, повёрнутая на 90°, × ratio) · sin t
+                    const at = (t: number) =>
+                        tf({ x: c.x + m.x * Math.cos(t) - m.y * ratio * Math.sin(t), y: c.y + m.y * Math.cos(t) + m.x * ratio * Math.sin(t) });
+                    const steps = arcSteps(end - start);
+                    for (let i = 0; i < steps; i++) push(at(start + ((end - start) * i) / steps), at(start + ((end - start) * (i + 1)) / steps));
+                    break;
+                }
+                case "SPLINE": {
+                    const v = splinePoints(ent).map(tf);
+                    for (let i = 0; i + 1 < v.length; i++) push(v[i], v[i + 1]);
+                    if (ent.closed && v.length > 2) push(v[v.length - 1], v[0]);
                     break;
                 }
                 case "CIRCLE":
@@ -176,12 +279,34 @@ export function dxfToDrawing(text: string, name: string): Drawing {
     walk(dxf.entities, identity, 0, true);
     if (segments.length === 0) throw new Error("В чертеже нет линий: нужны отрезки или полилинии с контуром здания");
 
-    // Контур здания — наибольшая по площади замкнутая полилиния
-    const outline = closed.length ? closed.reduce((best, p) => (shoelace(p) > shoelace(best) ? p : best)) : null;
-
-    const box = outline ? pointsBox(outline) : bbox(segments);
     const header = dxf.header?.$INSUNITS;
     const fromFile = typeof header === "number" ? INSUNITS[header] : undefined;
+    const all = bbox(segments);
+    const guessAll = guessUnits(Math.max(all.maxX - all.minX, all.maxY - all.minY));
+
+    // Контур здания: наибольшая замкнутая полилиния — или внешняя граница, собранная из всех линий,
+    // если она больше (стены отдельными отрезками, здание из нескольких полилиний)
+    // Контур должен быть зданием, а не стеллажом внутри стен с проёмами ворот: если он не дотягивает
+    // до половины чертежа хотя бы по одной стороне — не доверяем ему и честно берём рамку
+    const covers = (pts: Pt[]) => {
+        const b = pointsBox(pts);
+        return (b.maxX - b.minX) * 2 >= all.maxX - all.minX && (b.maxY - b.minY) * 2 >= all.maxY - all.minY;
+    };
+    const largest = closed.length ? closed.reduce((best, p) => (shoelace(p) > shoelace(best) ? p : best)) : null;
+    const polyline = largest && covers(largest) ? largest : null;
+    const polyArea = polyline ? shoelace(polyline) : 0;
+    const k = TO_METERS[fromFile ?? guessAll];
+    const assembled = outerContour(segments, SNAP_M.map((m) => m / k));
+    const useAssembled = assembled !== null && covers(assembled.points) && assembled.area > polyArea * 1.001;
+
+    let outline: Pt[] | null = polyline;
+    let info: OutlineInfo | undefined = polyline ? { from: "polyline", gapM: 0, others: 0 } : undefined;
+    if (useAssembled) {
+        outline = assembled.points;
+        info = { from: "lines", gapM: assembled.tolerance * k, others: assembled.others };
+    }
+
+    const box = outline ? pointsBox(outline) : all;
 
     return {
         name,
@@ -189,7 +314,7 @@ export function dxfToDrawing(text: string, name: string): Drawing {
         unitsSource: fromFile ? "file" : "guess",
         segments,
         outline,
-        stats: { entities: dxf.entities.length, skipped, truncated },
+        stats: { entities: dxf.entities.length, skipped, truncated, outline: info },
     };
 }
 
@@ -207,6 +332,7 @@ export function measure(d: Drawing, units: DrawingUnits = d.units): Measured {
         areaM2: d.outline ? shoelace(d.outline) * k * k : widthM * lengthM,
         byOutline: d.outline !== null,
         segmentsM: d.segments.map(([x1, y1, x2, y2]) => [...toSchema(x1, y1), ...toSchema(x2, y2)] as Segment),
+        outlineM: d.outline ? d.outline.map((p) => toSchema(p.x, p.y)) : null,
     };
 }
 
