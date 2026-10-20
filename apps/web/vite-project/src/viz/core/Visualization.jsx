@@ -22,7 +22,7 @@ function Footer({ meta }) {
   );
 }
 
-export function Visualization({ result }) {
+export function Visualization({ result, underlay = null }) {
   const norm = useMemo(() => normalizeResult(result), [result]);
   const layout = useMemo(() => (norm.data && !norm.data.baseline ? buildLayout(norm.data) : null), [norm]);
   const [running, setRunning] = useState(true);
@@ -66,9 +66,18 @@ export function Visualization({ result }) {
       <div className="card">
         <h3>План склада</h3>
         <div className="toolbar">
-          {Object.entries(LAYERS).map(([k, label]) => <label key={k}><input type="checkbox" checked={!hidden.includes(k)} onChange={() => toggle(k)} /> {label}</label>)}
+          {Object.entries(underlay ? { underlay: 'Чертёж заказчика', ...LAYERS } : LAYERS).map(([k, label]) => <label key={k}><input type="checkbox" checked={!hidden.includes(k)} onChange={() => toggle(k)} /> {label}</label>)}
         </div>
-        <WarehouseCanvas warehouse={d.warehouse} layout={layout} sim={sim} selectedId={selected?.id} onSelect={setSelected} hidden={hidden} svgRef={svgRef} />
+        <div style={{ position: 'relative' }}>
+          <WarehouseCanvas warehouse={d.warehouse} layout={layout} sim={sim} selectedId={selected?.id} onSelect={setSelected} hidden={hidden} svgRef={svgRef} underlay={underlay} />
+          {/* Ни одна ячейка не встала — иначе человек видит пустой пол и не понимает почему */}
+          {st.cellsNeeded > 0 && st.cellsPlaced === 0 && (
+            <div className="canvas-empty" role="status">
+              <b>На складе {d.warehouse.width} × {d.warehouse.length} м не помещается ни одна ячейка</b>
+              <span>Ячейке со стеллажами, роботом и проездами нужно {st.cellW} × {st.cellL} м плюс зоны приёма и выдачи. Проверьте габариты объекта — экономика на них тоже недостоверна.</span>
+            </div>
+          )}
+        </div>
         <div className="toolbar" style={{ marginTop: 8 }}>
           <button className="btn" onClick={() => downloadPng(svgRef.current, fname)}>Сохранить схему (PNG)</button>
           <button className="btn" onClick={() => downloadSvg(svgRef.current, fname)}>Сохранить схему (SVG)</button>

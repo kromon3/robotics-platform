@@ -78,3 +78,10 @@ code { background: var(--soft); padding: 1px 4px; border-radius: 3px; font-size:
   .recharts-default-tooltip { background: var(--card) !important; border-color: var(--line) !important; color: var(--ink); }
   .recharts-tooltip-item, .recharts-tooltip-label { color: var(--ink) !important; }
 }
+/* Сообщение поверх пустой схемы: ни одна ячейка не помещается на складе */
+.viz .canvas-empty {
+  position: absolute; inset: 0; margin: auto; height: fit-content; max-width: 28rem;
+  display: flex; flex-direction: column; gap: 6px; padding: 14px 16px;
+  background: #fffbeb; color: #78350f; border: 1px solid #fcd34d; border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18); font-size: 13px; line-height: 1.4; text-align: center;
+}

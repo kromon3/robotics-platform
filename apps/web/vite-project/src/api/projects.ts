@@ -1,6 +1,10 @@
 import axios from "axios";
 import type { EconFormData } from "../store/econStore";
 import type { ProjectFormData } from "../store/store";
+import type { SavedDrawing } from "../lib/drawing";
+
+/** Параметры объекта в сохранённом расчёте: поля формы и, если был, чертёж DXF */
+export type SavedParams = ProjectFormData & { drawing?: SavedDrawing };
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -24,7 +28,7 @@ export type ProjectSummary = {
 };
 
 export type ProjectDetail = ProjectSummary & {
-    params: ProjectFormData;
+    params: SavedParams;
     econ: EconFormData | null;
     norms: Record<string, unknown> | null;
     productId: string | null;
@@ -32,7 +36,7 @@ export type ProjectDetail = ProjectSummary & {
 
 export type SaveProjectPayload = {
     name: string;
-    params: ProjectFormData;
+    params: SavedParams;
     econ?: EconFormData;
     norms?: Record<string, unknown>;
     productId?: string;

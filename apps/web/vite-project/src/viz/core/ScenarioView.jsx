@@ -7,7 +7,8 @@ import { GenericChart } from './Dashboard';
 const KIND = { baseline: 'без роботизации', buy: 'покупка', raas: 'услуга (RaaS)' };
 const fmt = (v) => (typeof v === 'number' ? v.toLocaleString('ru-RU') : String(v));
 
-export function ScenarioView({ scenarios }) {
+/** @param {{ scenarios: any[], underlay?: { kind: 'lines', segments: number[][] } | { kind: 'image', url: string } | null }} props — underlay: чертёж заказчика под схемой */
+export function ScenarioView({ scenarios, underlay = null }) {
   const list = useMemo(() => scenarios.map((raw, i) => {
     const n = normalizeResult(raw), d = n.data;
     return { i, raw, d, name: d?.meta?.scenarioName || raw?.meta?.scenarioName || `Сценарий ${i + 1}`, kind: d?.meta?.kind || 'buy' };
@@ -46,7 +47,7 @@ export function ScenarioView({ scenarios }) {
           )}
         </>
       )}
-      <Visualization key={cur.i} result={cur.raw} />
+      <Visualization key={cur.i} result={cur.raw} underlay={underlay} />
     </div>
   );
 }

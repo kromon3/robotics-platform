@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useDemoStore } from "../store/demoStore";
 import { DemoLock } from "../components/DemoLock.tsx";
+import { DrawingUpload } from "../components/DrawingUpload.tsx";
 import { RealismWarnings } from "../components/RealismWarnings.tsx";
 import { checkRealism } from "../lib/realism";
 import { toast } from "sonner";
@@ -248,6 +249,12 @@ export function Project() {
             </div>
 
             <div className="mx-auto w-full max-w-3xl">
+                {/* Чертёж из AutoCAD: габариты и площадь здания подставляются в форму по кнопке */}
+                {!demo && (
+                    <div className="mb-4">
+                        <DrawingUpload />
+                    </div>
+                )}
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
                     <Swiper
                         modules={[A11y, EffectCreative]}

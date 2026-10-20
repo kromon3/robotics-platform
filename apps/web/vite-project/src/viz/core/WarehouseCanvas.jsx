@@ -16,7 +16,7 @@ function rackProps(it, nodes) {
 }
 
 // 1 единица SVG = 1 метр: габариты из расчёта используются как есть
-export function WarehouseCanvas({ warehouse, layout, sim, selectedId, onSelect, hidden = [], svgRef }) {
+export function WarehouseCanvas({ warehouse, layout, sim, selectedId, onSelect, hidden = [], svgRef, underlay = null }) {
   const { width: W, length: L } = warehouse, T = 0.8, pad = 2.8;
   const statics = layout.items.filter((it) => !hidden.includes(layerOf(it))).sort((a, b) => order(a) - order(b));
   const sel = (it) => selectedId === it.id && <rect width={it.w} height={it.l} fill="none" stroke="#ef4444" strokeWidth={0.12} />;
@@ -32,6 +32,18 @@ export function WarehouseCanvas({ warehouse, layout, sim, selectedId, onSelect, 
       {/* пол */}
       <rect width={W} height={L} fill="#eef2f6" />
       <rect width={W} height={L} fill="url(#floor)" />
+
+      {/* чертёж заказчика: линии DXF в метрах или картинка на габариты склада — под стеллажами и роботами */}
+      {underlay && !hidden.includes('underlay') && (
+        <g pointerEvents="none" opacity={0.6}>
+          {underlay.kind === 'lines' && (
+            <g stroke="#0f172a" strokeWidth={0.12} strokeLinecap="round">
+              {underlay.segments.map(([x1, y1, x2, y2], i) => <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} />)}
+            </g>
+          )}
+          {underlay.kind === 'image' && <image href={underlay.url} x={0} y={0} width={W} height={L} preserveAspectRatio="xMidYMid meet" />}
+        </g>
+      )}
 
       {statics.map((it) => (
         <g key={it.id} transform={`translate(${it.x} ${it.y})`} onClick={() => onSelect?.(it)} style={{ cursor: it.kind === 'fence' || it.kind === 'aisle' ? 'default' : 'pointer' }}

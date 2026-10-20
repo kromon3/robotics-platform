@@ -13,6 +13,9 @@ import { MODEL_VERSION, buildScenarios, normsFor, toNorms, toRobotInput, toSiteI
 import type { DockLayout } from "../viz/routeModel";
 import { exportReportToExcel, printReport, type ReportMeta } from "../lib/report-export";
 import { useDemoStore } from "../store/demoStore";
+import { toCanvasUnderlay, toSavedDrawing, useDrawingStore } from "../store/drawingStore";
+import { checkRealism } from "../lib/realism";
+import { RealismWarnings } from "../components/RealismWarnings.tsx";
 import { EconomicsReport, type ReportInputs } from "../components/EconomicsReport.tsx";
 import { ScenarioView } from "../viz/core/ScenarioView";
 import { ErrorBoundary } from "../viz/core/ErrorBoundary";
@@ -42,6 +45,8 @@ export function ProjectResult() {
     const [tab, setTab] = useState<Tab>("report");
     const [saving, setSaving] = useState(false);
     const demo = useDemoStore((s) => s.active);
+    const drawing = useDrawingStore((s) => s.underlay);
+    const canvasUnderlay = useMemo(() => toCanvasUnderlay(drawing), [drawing]);
 
     const ready = getMissingFields(formData).length === 0 && getInvalidFields(formData).length === 0 && !!productId;
 
@@ -60,6 +65,12 @@ export function ProjectResult() {
 
     const econNumeric = useMemo(() => toEconNumeric(econ), [econ]);
     const hasEcon = Boolean(econ.workMode);
+    // Те же мягкие проверки, что на форме и витрине: руководитель не должен видеть
+    // «окупаемость 0,5 года» на складе 5 × 5 м без оговорки рядом
+    const realism = useMemo(
+        () => (ready ? checkRealism(toNumericFormData(formData), hasEcon ? econNumeric : undefined) : []),
+        [ready, formData, econNumeric, hasEcon],
+    );
     const patchEcon = useEconStore((s) => s.patch);
 
     // Расположение ворот и время погрузки берём из формы экономики даже без остальных её данных:
@@ -143,7 +154,8 @@ export function ProjectResult() {
             const buy = computeScenario("buy", economics.site, economics.robot, economics.norms);
             const created = await projectsApi.create({
                 name: `${product.name} — ${new Date().toLocaleDateString("ru-RU")}`,
-                params: formData,
+                // Чертёж — упрощённой копией рядом с параметрами объекта: откроют расчёт — увидят и его
+                params: { ...formData, drawing: toSavedDrawing(drawing) },
                 econ: hasEcon ? econ : undefined,
                 norms: economics.norms as unknown as Record<string, unknown>,
                 productId: product.id,
@@ -155,7 +167,13 @@ export function ProjectResult() {
                 roiPercent: buy.roi ?? undefined,
                 tco: Math.round(buy.tco),
             });
-            toast.success("Расчёт сохранён");
+            toast.success(
+                drawing && drawing.kind !== "dxf"
+                    ? "Расчёт сохранён. Картинка-подложка с расчётом не сохраняется — только чертежи DXF"
+                    : drawing?.kind === "dxf"
+                      ? "Расчёт сохранён вместе с чертежом"
+                      : "Расчёт сохранён",
+            );
             navigate(`/calculations?saved=${created.id}`);
         } catch (err) {
             const msg = axios.isAxiosError(err) ? err.response?.data?.message : null;
@@ -224,6 +242,8 @@ export function ProjectResult() {
                 </div>
             )}
 
+            <RealismWarnings warnings={realism} />
+
             <div className="flex gap-2 print:hidden">
                 <button type="button" className={tabClass("report")} onClick={() => setTab("report")}>
                     Экономический отчёт
@@ -266,11 +286,39 @@ export function ProjectResult() {
                 />
             )}
 
+            {/* Чертёж заказчика: что с ним сделано — чтобы было видно, влияет ли он на расчёт */}
+            {tab === "simulation" && drawing && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900 print:hidden">
+                    <p>
+                        📐 <b>{drawing.name}</b>{" "}
+                        {drawing.kind === "dxf"
+                            ? drawing.applied
+                                ? "— нарисован поверх схемы; габариты и площадь здания из него в расчёте."
+                                : "— нарисован поверх схемы, но габариты из него в расчёт не подставлены."
+                            : drawing.kind === "image"
+                              ? "— подложка под схемой для сверки, в расчёт не идёт."
+                              : "— для сверки со схемой, в расчёт не идёт."}{" "}
+                        {drawing.kind === "dxf" && !drawing.applied && (
+                            <Link to="/projects/warehouse" className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+                                Подставить на шаге параметров
+                            </Link>
+                        )}
+                    </p>
+                    {drawing.kind === "pdf" && (
+                        <object data={drawing.url} type="application/pdf" className="mt-3 h-96 w-full rounded-lg border border-slate-200 dark:border-slate-800">
+                            <a href={drawing.url} target="_blank" rel="noreferrer" className="text-indigo-600 underline">
+                                Открыть PDF
+                            </a>
+                        </object>
+                    )}
+                </div>
+            )}
+
             {tab === "simulation" && scenarios && (
                 // .viz — область стилей визуализации (viz.css), внутри — компоненты warehouse-viz как есть
                 <div className="viz">
                     <ErrorBoundary>
-                        <ScenarioView scenarios={scenarios} />
+                        <ScenarioView scenarios={scenarios} underlay={canvasUnderlay} />
                     </ErrorBoundary>
                 </div>
             )}

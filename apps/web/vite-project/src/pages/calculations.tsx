@@ -6,6 +6,7 @@ import { isAuthenticated, projectsApi, type ProjectSummary } from "../api/projec
 import { productPhotoUrl } from "../api/catalog.ts";
 import { useProjectStore } from "../store/store";
 import { sanitizeEcon, useEconStore } from "../store/econStore";
+import { useDrawingStore } from "../store/drawingStore";
 import { paybackZone, roiZone, type Zone } from "../viz/economics";
 
 const ZONE_STYLE: Record<Zone, string> = {
@@ -52,7 +53,10 @@ export function Calculations() {
     const open = async (id: string) => {
         try {
             const p = await projectsApi.get(id);
-            setFormData({ formData: p.params, selectedProductId: p.productId });
+            // Чертёж лежит в params рядом с полями формы — в саму форму его не кладём
+            const { drawing, ...formData } = p.params;
+            setFormData({ formData, selectedProductId: p.productId });
+            useDrawingStore.getState().restore(drawing);
             if (p.econ) setEcon({ econ: sanitizeEcon(p.econ) });
             selectProduct(p.productId);
             navigate("/projects/result");
